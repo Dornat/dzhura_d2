@@ -47,8 +47,8 @@ class Run extends Command
             }
         });
 
-        $discord->listenCommand('zoo', (new LfgSlashCommandListener($discord))->listen());
-        $discord->listenCommand('zoodelete', (new LfgDeleteSlashCommandListener())->listen());
+        $discord->listenCommand('lfg', (new LfgSlashCommandListener($discord))->listen());
+        $discord->listenCommand('lfgdelete', (new LfgDeleteSlashCommandListener())->listen());
 
         $discord->run();
     }

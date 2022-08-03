@@ -4,11 +4,11 @@ use Discord\Parts\Interactions\Command\Option;
 
 return [
     [
-        'name' => 'zoo',
+        'name' => 'lfg',
         'description' => 'Створити групу'
     ],
     [
-        'name' => 'zoodelete',
+        'name' => 'lfgdelete',
         'description' => 'Видалити групу за ідентифікатором',
         'options' => [
             [
