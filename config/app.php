@@ -26,7 +26,7 @@ return [
     |
     */
 
-    'version' => app('git.version'),
+    'version' => env('APP_VERSION') ?: app('git.version'),
 
     /*
     |--------------------------------------------------------------------------

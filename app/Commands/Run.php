@@ -4,9 +4,13 @@ namespace App\Commands;
 
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
+use Discord\InteractionType;
 use Discord\Parts\Interactions\Command\Command as DiscordCommand;
 use Discord\Discord;
 use Discord\Exceptions\IntentException;
+use Discord\Parts\Interactions\Interaction;
+use Discord\Parts\User\Activity;
+use Discord\WebSockets\Event;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use LaravelZero\Framework\Commands\Command;
@@ -41,14 +45,25 @@ class Run extends Command
         ]);
 
         $discord->on('ready', function (Discord $discord) {
+            $botActivity = new Activity($discord, [
+                'type' => Activity::TYPE_PLAYING,
+                'name' => 'Ліквідація москалів. [v' . config('app.version') . ']'
+            ]);
+            $discord->updatePresence($botActivity);
+
             foreach (config('slash_commands') as $opts) {
                 $slashCommand = new DiscordCommand($discord, $opts);
                 $discord->application->commands->save($slashCommand);
             }
         });
 
-        $discord->listenCommand('lfg', (new LfgSlashCommandListener($discord))->listen());
-        $discord->listenCommand('lfgdelete', (new LfgDeleteSlashCommandListener())->listen());
+        $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Discord $discord) {
+            if ($interaction->type === InteractionType::MODAL_SUBMIT && $interaction->data->custom_id === LfgSlashCommandListener::LFG_MODAL) {
+                LfgSlashCommandListener::onModalSubmit($interaction, $discord);
+            }
+            LfgSlashCommandListener::act($interaction);
+            LfgDeleteSlashCommandListener::act($interaction);
+        });
 
         $discord->run();
     }
