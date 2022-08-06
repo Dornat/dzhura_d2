@@ -21,8 +21,6 @@ class Lfg extends Migration
             $table->string('title');
             $table->string('description');
             $table->tinyInteger('group_size');
-            $table->longText('participants')->nullable();
-            $table->longText('reserve')->nullable();
             $table->timestamp('time_of_start')->nullable();
             $table->enum('type', ['gambit', 'raid', 'pve', 'pvp', 'other']);
             $table->timestamps();

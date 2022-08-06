@@ -2,8 +2,10 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 /**
@@ -15,8 +17,8 @@ use Illuminate\Support\Str;
  * @property string $title
  * @property string $description
  * @property int $group_size
- * @property string $participants
- * @property string $reserve
+ * @property Collection $participants
+ * @property Collection $reserve
  * @property string $type
  */
 class Lfg extends Model
@@ -40,5 +42,15 @@ class Lfg extends Model
         static::creating(function ($model) {
             $model->setAttribute('uuid', Str::uuid());
         });
+    }
+
+    public function participants(): HasMany
+    {
+        return $this->hasMany(Participant::class, 'lfg_uuid', 'uuid');
+    }
+
+    public function reserve(): HasMany
+    {
+        return $this->hasMany(Reserve::class, 'lfg_uuid', 'uuid');
     }
 }
