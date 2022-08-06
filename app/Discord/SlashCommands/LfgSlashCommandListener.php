@@ -5,6 +5,8 @@ namespace App\Discord\SlashCommands;
 use App\Discord\Helpers\SlashCommandHelper;
 use App\Discord\SlashCommands\Lfg\ActivityTypes;
 use App\Lfg;
+use App\Participant;
+use App\Reserve;
 use Closure;
 use DateTime;
 use Discord\Builders\Components\ActionRow;
@@ -19,8 +21,6 @@ use Discord\InteractionType;
 use Discord\Parts\Channel\Message;
 use Discord\Parts\Embed\Embed;
 use Discord\Parts\Interactions\Interaction;
-use Discord\Parts\User\Activity;
-use JetBrains\PhpStorm\ArrayShape;
 
 class LfgSlashCommandListener implements SlashCommandListenerInterface
 {
@@ -197,53 +197,44 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         $userId = $interaction->member->user->id;
         $fields = $theEmbed->fields;
 
-        $lfg = LfgSlashCommandListener::getLfgFromEmbed($interaction);
+        $lfg = self::getLfgFromEmbed($interaction);
         $participants = $lfg->participants;
         $reserve = $lfg->reserve;
 
-        if (!empty($participants)) {
-            $parts = explode('|', $participants);
-            if (!in_array($userId, $parts, true)) {
-                if (count($parts) < $lfg->group_size) {
-                    $res = explode('|', $reserve);
-                    if (!empty($reserve) && in_array($userId, $res, true)) {
-                        unset($res[array_search($userId, $res)]);
-                        if (empty($res)) {
+        if ($participants->isNotEmpty()) { // This is important, don't join this if with the inner if.
+            if ($participants->pluck('user_id')->doesntContain($userId)) {
+                if ($participants->count() < $lfg->group_size) {
+                    if ($reserve->isNotEmpty() && $reserve->pluck('user_id')->contains($userId)) {
+                        $reserve->get($reserve->pluck('user_id')->search($userId))->delete();
+                        $reserve = $lfg->refresh()->reserve;
+                        if ($reserve->isEmpty()) {
                             $fields->pull('Резерв');
-                            $lfg->reserve = null;
                         } else {
                             $fields->offsetSet('Резерв', [
-                                'value' => SlashCommandHelper::assembleAtUsersString($res),
+                                'value' => SlashCommandHelper::assembleAtUsersString($reserve->pluck('user_id')->toArray()),
                                 'name' => 'Резерв',
                                 'inline' => false
                             ]);
-                            $lfg->reserve = implode('|', $res);
                         }
                     }
-                    $parts[] = $userId;
+                    $lfg->participants()->save(new Participant(['user_id' => $userId]));
                     $fields->offsetSet('Учасники', [
-                        'value' => SlashCommandHelper::assembleAtUsersString($parts),
+                        'value' => SlashCommandHelper::assembleAtUsersString($lfg->refresh()->participants->pluck('user_id')->toArray()),
                         'name' => 'Учасники',
                         'inline' => false
                     ]);
-                    $lfg->participants = implode('|', $parts);
-                    $lfg->save();
                 } else {
-                    if (!empty($reserve)) {
-                        $res = explode('|', $reserve);
-                        if (!in_array($userId, $res, true)) {
-                            $res[] = $userId;
+                    if ($reserve->isNotEmpty()) { // This is important, don't join this if with the inner if.
+                        if ($reserve->pluck('user_id')->doesntContain($userId)) {
+                            $lfg->reserve()->save(new Reserve(['user_id' => $userId, 'want_to_go' => true]));
                             $fields->offsetSet('Резерв', [
-                                'value' => SlashCommandHelper::assembleAtUsersString($res),
+                                'value' => SlashCommandHelper::assembleAtUsersString($lfg->refresh()->reserve->pluck('user_id')->toArray()),
                                 'name' => 'Резерв',
                                 'inline' => false
                             ]);
-                            $lfg->reserve = implode('|', $res);
-                            $lfg->save();
                         }
                     } else {
-                        $lfg->reserve = $userId;
-                        $lfg->save();
+                        $lfg->reserve()->save(new Reserve(['user_id' => $userId, 'want_to_go' => true]));
                         $fields->offsetSet('Резерв', [
                             'value' => "<@$userId>",
                             'name' => 'Резерв',
@@ -253,32 +244,28 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 }
             }
         } else {
-            $lfg->participants = $userId;
+            $lfg->participants()->save(new Participant(['user_id' => $userId]));
             $reserveField = $fields->pull('Резерв');
             $fields->offsetSet('Учасники', [
                 'value' => "<@$userId>",
                 'name' => 'Учасники',
                 'inline' => false
             ]);
-            if (!empty($reserve)) {
-                $res = explode('|', $reserve);
-                if (in_array($userId, $res, true)) {
-                    unset($res[array_search($userId, $res)]);
-                    if (empty($res)) {
-                        $lfg->reserve = null;
-                    } else {
+            if ($reserve->isNotEmpty()) {
+                if ($reserve->pluck('user_id')->contains($userId)) {
+                    $reserve->get($reserve->pluck('user_id')->search($userId))->delete();
+                    $reserve = $lfg->refresh()->reserve;
+                    if ($reserve->isNotEmpty()) {
                         $fields->offsetSet('Резерв', [
-                            'value' => SlashCommandHelper::assembleAtUsersString($res),
+                            'value' => SlashCommandHelper::assembleAtUsersString($reserve->pluck('user_id')->toArray()),
                             'name' => 'Резерв',
                             'inline' => false
                         ]);
-                        $lfg->reserve = implode('|', $res);
                     }
                 } else {
                     $fields->offsetSet('Резерв', $reserveField);
                 }
             }
-            $lfg->save();
         }
 
         $theEmbed->offsetUnset('fields');
@@ -306,19 +293,17 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         $participants = $lfg->participants;
         $reserve = $lfg->reserve;
 
-        if (!empty($reserve)) {
-            $res = explode('|', $reserve);
-            if (!in_array($userId, $res, true)) {
-                $res[] = $userId;
+        if ($reserve->isNotEmpty()) {
+            if ($reserve->pluck('user_id')->doesntContain($userId)) {
+                $lfg->reserve()->save(new Reserve(['user_id' => $userId]));
                 $fields->offsetSet('Резерв', [
-                    'value' => SlashCommandHelper::assembleAtUsersString($res),
+                    'value' => SlashCommandHelper::assembleAtUsersString($lfg->refresh()->reserve->pluck('user_id')->toArray()),
                     'name' => 'Резерв',
                     'inline' => false
                 ]);
-                $lfg->reserve = implode('|', $res);
             }
         } else {
-            $lfg->reserve = $userId;
+            $lfg->reserve()->save(new Reserve(['user_id' => $userId]));
             $fields->offsetSet('Резерв', [
                 'value' => "<@$userId>",
                 'name' => 'Резерв',
@@ -326,22 +311,19 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             ]);
         }
 
-        $parts = explode('|', $participants);
-        if (!empty($participants) && in_array($userId, $parts, true)) {
-            unset($parts[array_search($userId, $parts)]);
-            if (empty($parts)) {
+        if ($participants->isNotEmpty() && $participants->pluck('user_id')->contains($userId)) {
+            $participants->get($participants->pluck('user_id')->search($userId))->delete();
+            $participants = $lfg->refresh()->participants;
+            if ($participants->isEmpty()) {
                 $fields->pull('Учасники');
-                $lfg->participants = null;
             } else {
                 $fields->offsetSet('Учасники', [
-                    'value' => SlashCommandHelper::assembleAtUsersString($parts),
+                    'value' => SlashCommandHelper::assembleAtUsersString($participants->pluck('user_id')->toArray()),
                     'name' => 'Учасники',
                     'inline' => false
                 ]);
-                $lfg->participants = implode('|', $parts);
             }
         }
-        $lfg->save();
 
         $theEmbed->offsetUnset('fields');
         foreach ($fields->toArray() as $field) {
@@ -359,45 +341,55 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         $theEmbed = $interaction->message->embeds->first();
         $userId = $interaction->member->user->id;
         $fields = $theEmbed->fields;
+
         $lfg = self::getLfgFromEmbed($interaction);
         $participants = $lfg->participants;
         $reserve = $lfg->reserve;
 
-        if (!empty($participants)) {
-            $parts = explode('|', $participants);
-            if (in_array($userId, $parts, true)) {
-                unset($parts[array_search($userId, $parts)]);
+        if ($participants->isNotEmpty()) {
+            if ($participants->pluck('user_id')->contains($userId)) {
+                $participants->get($participants->pluck('user_id')->search($userId))->delete();
+                $participants = $lfg->refresh()->participants;
+
+                $reservedParticipant = $lfg->reserve()->where('want_to_go', true)->oldest()->first();
+                if (!is_null($reservedParticipant)) {
+                    $reservedParticipantId = $reservedParticipant->user_id;
+                    $reservedParticipant->delete();
+                    $lfg->participants()->save(new Participant(['user_id' => $reservedParticipantId]));
+                    $participants = $lfg->refresh()->participants;
+                    $reserve = $lfg->refresh()->reserve;
+
+                    if ($reserve->isEmpty()) {
+                        $fields->pull('Резерв');
+                    }
+                }
             }
 
-            if (empty($parts)) {
+            if ($participants->isEmpty()) {
                 $fields->pull('Учасники');
-                $lfg->participants = null;
             } else {
                 $fields->offsetSet('Учасники', [
-                    'value' => SlashCommandHelper::assembleAtUsersString($parts),
+                    'value' => SlashCommandHelper::assembleAtUsersString($participants->pluck('user_id')->toArray()),
                     'name' => 'Учасники',
                     'inline' => false
                 ]);
-                $lfg->participants = implode('|', $parts);
             }
         }
 
-        if (!empty($reserve)) {
-            $res = explode('|', $reserve);
-            if (in_array($userId, $res, true)) {
-                unset($res[array_search($userId, $res)]);
+        if ($reserve->isNotEmpty()) {
+            if ($reserve->pluck('user_id')->contains($userId)) {
+                $reserve->get($reserve->pluck('user_id')->search($userId))->delete();
+                $reserve = $lfg->refresh()->reserve;
             }
 
-            if (empty($res)) {
+            if ($reserve->isEmpty()) {
                 $fields->pull('Резерв');
-                $lfg->reserve = null;
             } else {
                 $fields->offsetSet('Резерв', [
-                    'value' => SlashCommandHelper::assembleAtUsersString($res),
+                    'value' => SlashCommandHelper::assembleAtUsersString($reserve->pluck('user_id')->toArray()),
                     'name' => 'Резерв',
                     'inline' => false
                 ]);
-                $lfg->reserve = implode('|', $res);
             }
         }
 
@@ -420,6 +412,8 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         if ($lfg->owner === $userId) {
             $interaction->message->delete();
             $lfg->delete();
+        } else {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Тільки ініціатор може видалити групу. :man_shrugging:'), true);
         }
     }
 
