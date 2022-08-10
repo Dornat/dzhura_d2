@@ -6,6 +6,7 @@ use App\Discord\Helpers\SlashCommandHelper;
 use App\Discord\SlashCommands\Lfg\ActivityTypes;
 use App\Lfg;
 use App\Participant;
+use App\ParticipantInQueue;
 use App\Reserve;
 use Closure;
 use DateTime;
@@ -21,6 +22,7 @@ use Discord\InteractionType;
 use Discord\Parts\Channel\Message;
 use Discord\Parts\Embed\Embed;
 use Discord\Parts\Interactions\Interaction;
+use Discord\Parts\User\User;
 
 class LfgSlashCommandListener implements SlashCommandListenerInterface
 {
@@ -28,6 +30,10 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
     public const RESERVE_BTN = 'reserve_btn';
     public const REMOVE_REGISTRATION_BTN = 'remove_registration_btn';
     public const REMOVE_GROUP_BTN = 'remove_group_btn';
+    public const AUTOMATIC_BTN = 'automatic_btn';
+    public const MANUAL_BTN = 'manual_btn';
+    public const MANUAL_APPROVE_BTN = 'manual_approve_btn';
+    public const MANUAL_DECLINE_BTN = 'manual_decline_btn';
     public const LFG = 'lfg';
     public const LFG_MODAL = 'lfg_modal';
 
@@ -37,9 +43,6 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
     {
         if ($interaction->type === InteractionType::APPLICATION_COMMAND && $interaction->data->name === self::LFG) {
             self::showModal($interaction);
-        } else if ($interaction->data->custom_id === self::I_WANT_TO_GO_BTN) {
-            self::iWantToGoBtn($interaction);
-            $interaction->acknowledge();
         } else if ($interaction->data->custom_id === self::RESERVE_BTN) {
             self::reserveBtn($interaction);
             $interaction->acknowledge();
@@ -88,16 +91,38 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
 
         self::$buttons = [];
 
-        foreach (ActivityTypes::list() as $type => $item) {
-            $btn = Button::new(Button::STYLE_SECONDARY, $type)->setLabel($item['label']);
-            // Saving buttons here to have the ability to clean up listeners.
-            self::$buttons[] = $btn;
-            $btn->setListener(self::onActivityTypeSubmit($collection, $discord), $discord, true);
-            $buttonActionRow->addComponent($btn);
-        }
+        $automaticBtn = Button::new(Button::STYLE_SUCCESS, self::AUTOMATIC_BTN)->setLabel('Автоматично');
+        $manualBtn = Button::new(Button::STYLE_DANGER, self::MANUAL_BTN)->setLabel('Ухвалювати учасників в ручну');
 
-        $buttonRow = MessageBuilder::new()->addComponent($buttonActionRow)->setContent('Оберіть тип активності:');
+        self::$buttons[] = $automaticBtn;
+        self::$buttons[] = $manualBtn;
+        $automaticBtn->setListener(self::onGroupModeSubmit($collection, $discord), $discord, true);
+        $manualBtn->setListener(self::onGroupModeSubmit($collection, $discord), $discord, true);
+        $buttonActionRow->addComponent($automaticBtn)->addComponent($manualBtn);
+
+        $buttonRow = MessageBuilder::new()
+            ->addComponent($buttonActionRow)
+            ->setContent("> Яким чином учасники будуть додаватися до групи? (Якщо це Ручний тип додавання - то ти власноруч будеш ухвалювати кожного учасника групи. Якщо обереш Автоматично - то ухвалення буде проходити в автоматичному режимі).\n\n_*Для роботи Ручного режиму у тебе має бути відкрита можливість писати в приватні повідомлення._");
         $interaction->respondWithMessage($buttonRow, true);
+    }
+
+    public static function onGroupModeSubmit(Collection $components, Discord $discord): Closure
+    {
+        return function (Interaction $interaction) use ($components, $discord) {
+            $components->set('manual', $interaction->data->custom_id === self::MANUAL_BTN);
+
+            $buttonActionRow = ActionRow::new();
+            foreach (ActivityTypes::list() as $type => $item) {
+                $btn = Button::new(Button::STYLE_SECONDARY, $type)->setLabel($item['label']);
+                // Saving buttons here to have the ability to clean up listeners.
+                self::$buttons[] = $btn;
+                $btn->setListener(self::onActivityTypeSubmit($components, $discord), $discord, true);
+                $buttonActionRow->addComponent($btn);
+            }
+
+            $buttonRow = MessageBuilder::new()->addComponent($buttonActionRow)->setContent('Обери тип активності:');
+            $interaction->updateMessage($buttonRow);
+        };
     }
 
     private static function onActivityTypeSubmit(Collection $components, Discord $discord): Closure
@@ -120,6 +145,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $type = $interaction->data->custom_id === ActivityTypes::RAID_SELECT ? ActivityTypes::RAID : $interaction->data->custom_id;
             $raidType = $interaction->data->custom_id === ActivityTypes::RAID_SELECT ? $interaction->data->values[0] : null;
             $date = DateTime::createFromFormat('G:i j n O', trim($components['date']) . ' +0300');
+            $date = $date === false ? DateTime::createFromFormat('G:i O', trim($components['date']) . ' +0300') : $date;
             if ($date === false) {
                 $interaction->updateMessage(MessageBuilder::new()->setContent('Неправильний формат дати. Формат: Г:ХВ (години:хвилини у 24 годинному форматі) число місяць (наприклад: 9:30 4 12, 20:00 15 7, 13:30 22 9).'));
                 return;
@@ -129,6 +155,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $title = $raidType ? ActivityTypes::list()[ActivityTypes::RAID]['types'][$raidType]['label'] : $components['activity_name'];
             $description = $components['description'];
             $groupSize = (int)$components['group_size'];
+            $manual = $components['manual'];
 
             $lfg = Lfg::create([
                 'owner' => $owner,
@@ -136,6 +163,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 'description' => $description,
                 'group_size' => $groupSize === 0 ? 6 : $groupSize,
                 'type' => $type,
+                'manual' => $manual,
                 'time_of_start' => $date
             ]);
 
@@ -169,8 +197,9 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             });
 
             // Clean up listeners.
-            foreach (self::$buttons as $btn) {
-                $btn->setListener(null, $discord);
+            foreach (self::$buttons as $k => $btn) {
+                $btn->removeListener();
+                unset(self::$buttons[$k]);
             }
         };
     }
@@ -190,7 +219,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         };
     }
 
-    private static function iWantToGoBtn(Interaction $interaction): void
+    public static function iWantToGoBtn(Interaction $interaction, Discord $discord): void
     {
         /** @var Embed $theEmbed */
         $theEmbed = $interaction->message->embeds->first();
@@ -199,6 +228,49 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
 
         $lfg = self::getLfgFromEmbed($interaction);
         $participants = $lfg->participants;
+        $participantsInQueue = $lfg->participantsInQueue;
+        $isApprovedInQueue = $participantsInQueue->get($participantsInQueue->pluck('user_id')->search($userId));
+        $isApprovedInQueue = $isApprovedInQueue ? $isApprovedInQueue->approved : false;
+
+        if (
+            $lfg->manual
+            && $lfg->owner !== $userId
+            && !$interaction->isResponded()
+            && !$isApprovedInQueue
+            && $participants->pluck('user_id')->doesntContain($userId)
+        ) {
+            if ($participantsInQueue->pluck('user_id')->contains($userId)) {
+                $part = $lfg->participantsInQueue()->where('user_id', $userId)->first();
+                if ($part->declined) {
+                    $interaction->respondWithMessage(MessageBuilder::new()->setContent('Упс... Напевно тебе відхилили. Не розстраюйся. :pig:'), true);
+                } else {
+                    $interaction->respondWithMessage(MessageBuilder::new()->setContent('Досить спамити. Ініціатор скоро підтвердить твою участь (або ж ні :man_shrugging:).'), true);
+                }
+                return;
+            }
+            $lfg->participantsInQueue()->save(new ParticipantInQueue(['user_id' => $userId]));
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Зачекай доки ініціатор додасть тебе до учасників групи.'), true);
+
+            $manualApproveBtn = Button::new(Button::STYLE_SUCCESS, self::MANUAL_APPROVE_BTN . $userId)->setLabel('Ухвалити');
+            $manualDeclineBtn = Button::new(Button::STYLE_DANGER, self::MANUAL_DECLINE_BTN . $userId)->setLabel('Відхилити');
+
+            self::$buttons[self::MANUAL_APPROVE_BTN . $userId] = $manualApproveBtn;
+            self::$buttons[self::MANUAL_DECLINE_BTN . $userId] = $manualDeclineBtn;
+            $buttonActionRow = ActionRow::new();
+            $buttonActionRow->addComponent($manualApproveBtn)->addComponent($manualDeclineBtn);
+            $manualApproveBtn->setListener(self::onManualApprove($interaction, $discord), $discord, true);
+            $manualDeclineBtn->setListener(self::onManualApprove($interaction, $discord), $discord, true);
+
+            $ownerUser = new User($discord, ['id' => $lfg->owner]);
+            $ownerUser->sendMessage(
+                MessageBuilder::new()
+                    ->setContent('Сервер: ' . $interaction->guild->name . "\nІм'я активності: " . $interaction->message->embeds->first()->title . "\nНова заявка на участь від **" . ($interaction->member->nick ?? $interaction->member->username) . "** (<@$userId>) у каналі #" . $interaction->channel->name)
+                    ->setNonce($userId)
+                    ->addComponent($buttonActionRow)
+            );
+            return;
+        }
+
         $reserve = $lfg->reserve;
 
         if ($participants->isNotEmpty()) { // This is important, don't join this if with the inner if.
@@ -280,6 +352,34 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 ->addEmbed($theEmbed)
                 ->addComponent($embedActionRow)
         );
+    }
+
+    private static function onManualApprove(Interaction $lfgInteraction, Discord $discord): Closure
+    {
+        return function (Interaction $interaction) use ($lfgInteraction, $discord) {
+            $lfg = self::getLfgFromEmbed($lfgInteraction);
+            $approvedParticipantId = $lfgInteraction->member->user->id;
+            $participantsInQueue = $lfg->participantsInQueue;
+            $part = $participantsInQueue->get($participantsInQueue->pluck('user_id')->search($approvedParticipantId));
+
+            if ($interaction->data->custom_id === (self::MANUAL_APPROVE_BTN . $approvedParticipantId)) {
+                $part->approved = true;
+                $part->save();
+                $interaction->updateMessage(MessageBuilder::new()->setContent('Ухвалено!'));
+                $interaction->message->delayedDelete(5000);
+                self::iWantToGoBtn($lfgInteraction, $discord);
+            } else {
+                $part->declined = true;
+                $part->save();
+                $interaction->updateMessage(MessageBuilder::new()->setContent('Відхилено!'));
+                $interaction->message->delayedDelete(5000);
+            }
+
+            self::$buttons[self::MANUAL_APPROVE_BTN . $approvedParticipantId]->removeListener();
+            self::$buttons[self::MANUAL_DECLINE_BTN . $approvedParticipantId]->removeListener();
+            unset(self::$buttons[self::MANUAL_APPROVE_BTN . $approvedParticipantId]);
+            unset(self::$buttons[self::MANUAL_DECLINE_BTN . $approvedParticipantId]);
+        };
     }
 
     private static function reserveBtn(Interaction $interaction): void

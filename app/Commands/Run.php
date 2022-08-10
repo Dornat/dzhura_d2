@@ -11,6 +11,7 @@ use Discord\Exceptions\IntentException;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Parts\User\Activity;
 use Discord\WebSockets\Event;
+use Discord\WebSockets\Intents;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use LaravelZero\Framework\Commands\Command;
@@ -60,6 +61,11 @@ class Run extends Command
         $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Discord $discord) {
             if ($interaction->type === InteractionType::MODAL_SUBMIT && $interaction->data->custom_id === LfgSlashCommandListener::LFG_MODAL) {
                 LfgSlashCommandListener::onModalSubmit($interaction, $discord);
+            }
+            if ($interaction->data->custom_id === LfgSlashCommandListener::I_WANT_TO_GO_BTN) {
+                LfgSlashCommandListener::iWantToGoBtn($interaction, $discord);
+                $interaction->acknowledge();
+                return;
             }
             LfgSlashCommandListener::act($interaction);
             LfgDeleteSlashCommandListener::act($interaction);

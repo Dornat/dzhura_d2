@@ -4,19 +4,20 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class Reserve extends Migration
+class ParticipantsInQueue extends Migration
 {
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('reserve', function (Blueprint $table) {
+        Schema::create('participants_in_queue', function (Blueprint $table) {
             $table->id();
             $table->uuid('lfg_uuid');
             $table->foreign('lfg_uuid')->references('uuid')->on('lfg')->onUpdate('cascade')->onDelete('cascade');
             $table->string('user_id');
-            $table->boolean('want_to_go')->default(false);
+            $table->string('declined')->default(false);
+            $table->string('approved')->default(false);
             $table->timestamps();
         });
     }
@@ -26,6 +27,6 @@ class Reserve extends Migration
      */
     public function down(): void
     {
-        Schema::drop('reserve');
+        Schema::drop('participants_in_queue');
     }
 }

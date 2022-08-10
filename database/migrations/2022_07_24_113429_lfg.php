@@ -9,10 +9,8 @@ class Lfg extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('lfg', function (Blueprint $table) {
             $table->uuid('uuid')->primary()->default(DB::raw('(UUID())'));
@@ -23,17 +21,16 @@ class Lfg extends Migration
             $table->tinyInteger('group_size');
             $table->timestamp('time_of_start')->nullable();
             $table->enum('type', ['gambit', 'raid', 'pve', 'pvp', 'other']);
+            $table->boolean('manual')->default(false);
             $table->timestamps();
         });
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        //
+        Schema::drop('lfg');
     }
 }
