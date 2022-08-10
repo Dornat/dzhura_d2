@@ -18,8 +18,10 @@ use Illuminate\Support\Str;
  * @property string $description
  * @property int $group_size
  * @property Collection $participants
+ * @property Collection $participantsInQueue
  * @property Collection $reserve
  * @property string $type
+ * @property boolean $manual
  */
 class Lfg extends Model
 {
@@ -33,7 +35,7 @@ class Lfg extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['owner', 'title', 'description', 'group_size', 'type', 'time_of_start'];
+    protected $fillable = ['owner', 'title', 'description', 'group_size', 'type', 'manual', 'time_of_start'];
 
     public static function boot()
     {
@@ -47,6 +49,11 @@ class Lfg extends Model
     public function participants(): HasMany
     {
         return $this->hasMany(Participant::class, 'lfg_uuid', 'uuid');
+    }
+
+    public function participantsInQueue(): HasMany
+    {
+        return $this->hasMany(ParticipantInQueue::class, 'lfg_uuid', 'uuid');
     }
 
     public function reserve(): HasMany

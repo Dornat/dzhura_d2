@@ -30,23 +30,23 @@ class ActivityTypes
                 'types' => [
                     self::RAID_DSC => [
                         'label' => 'Склеп глибокого каменю (DSC)',
-                        'image' => 'https://d1lss44hh2trtw.cloudfront.net/assets/article/2020/11/21/deep-stone-crypt-raid-guide-destiny-2_feature.jpg'
+                        'image' => 'https://i.ibb.co/CBDzhRC/deep-stone-crypt-1-00.jpg'
                     ],
                     self::RAID_GOS => [
                         'label' => 'Сад спасіння (GOS)',
-                        'image' => 'https://wallpapercave.com/wp/wp10912880.jpg'
+                        'image' => 'https://i.ibb.co/3rx69FL/4237924828a4a6f1cff6478c1ae57a5f.jpg'
                     ],
                     self::RAID_LW => [
                         'label' => 'Останнє бажання (LW)',
-                        'image' => 'https://static1.srcdn.com/wordpress/wp-content/uploads/2021/09/Destiny-2-Riven-Boss-Guide-Last-Wish-Raid.jpg'
+                        'image' => 'https://i.ibb.co/5LzCBWX/dorje-bellbrook-db-destiny2-forsaken-004.jpg'
                     ],
                     self::RAID_VOD => [
                         'label' => 'Клятва послушника (VOD)',
-                        'image' => 'https://destiny.wiki.gallery/images/thumb/0/0e/Vow_of_the_Disciple.jpg/1200px-Vow_of_the_Disciple.jpg'
+                        'image' => 'https://i.ibb.co/NFHTxMw/eric-cassels-ecassels-img-002-1.jpg'
                     ],
                     self::RAID_VOG => [
                         'label' => 'Кришталевий чертог (VOG)',
-                        'image' => 'https://assets.reedpopcdn.com/destiny_2_vault_of_glass_walkthrough_4.jpg/BROK/resize/1200x1200%3E/format/jpg/quality/70/destiny_2_vault_of_glass_walkthrough_4.jpg'
+                        'image' => 'https://i.ibb.co/kJ0RKck/unknown-13.png'
                     ],
                 ]
             ],
