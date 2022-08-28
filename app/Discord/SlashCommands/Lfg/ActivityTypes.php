@@ -13,6 +13,7 @@ class ActivityTypes
     public const RAID_GOS = 'gos';
     public const RAID_DSC = 'dsc';
     public const RAID_VOD = 'vod';
+    public const RAID_KF = 'kf';
 
     public const PVP = 'pvp';
     public const PVE = 'pve';
@@ -28,6 +29,19 @@ class ActivityTypes
                 'thumbnail' => 'https://www.bungie.net/common/destiny2_content/icons/8b1bfd1c1ce1cab51d23c78235a6e067.png',
                 'color' => '#f0c907',
                 'types' => [
+                    // In the order of appearance, newer at the top.
+                    self::RAID_KF => [
+                        'label' => 'Падіння короля (KF)',
+                        'image' => 'https://cdn1.dotesports.com/wp-content/uploads/2022/08/26094927/destiny-2-kings-fall-1.jpg'
+                    ],
+                    self::RAID_VOD => [
+                        'label' => 'Клятва послушника (VOD)',
+                        'image' => 'https://i.ibb.co/NFHTxMw/eric-cassels-ecassels-img-002-1.jpg'
+                    ],
+                    self::RAID_VOG => [
+                        'label' => 'Кришталевий чертог (VOG)',
+                        'image' => 'https://i.ibb.co/kJ0RKck/unknown-13.png'
+                    ],
                     self::RAID_DSC => [
                         'label' => 'Склеп глибокого каменю (DSC)',
                         'image' => 'https://i.ibb.co/CBDzhRC/deep-stone-crypt-1-00.jpg'
@@ -39,14 +53,6 @@ class ActivityTypes
                     self::RAID_LW => [
                         'label' => 'Останнє бажання (LW)',
                         'image' => 'https://i.ibb.co/5LzCBWX/dorje-bellbrook-db-destiny2-forsaken-004.jpg'
-                    ],
-                    self::RAID_VOD => [
-                        'label' => 'Клятва послушника (VOD)',
-                        'image' => 'https://i.ibb.co/NFHTxMw/eric-cassels-ecassels-img-002-1.jpg'
-                    ],
-                    self::RAID_VOG => [
-                        'label' => 'Кришталевий чертог (VOG)',
-                        'image' => 'https://i.ibb.co/kJ0RKck/unknown-13.png'
                     ],
                 ]
             ],

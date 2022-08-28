@@ -3,8 +3,10 @@
 namespace App\Commands;
 
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
+use App\Discord\SlashCommands\LfgEditSlashCommand;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
 use Discord\InteractionType;
+use Discord\Parts\Channel\Message;
 use Discord\Parts\Interactions\Command\Command as DiscordCommand;
 use Discord\Discord;
 use Discord\Exceptions\IntentException;
@@ -59,16 +61,9 @@ class Run extends Command
         });
 
         $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Discord $discord) {
-            if ($interaction->type === InteractionType::MODAL_SUBMIT && $interaction->data->custom_id === LfgSlashCommandListener::LFG_MODAL) {
-                LfgSlashCommandListener::onModalSubmit($interaction, $discord);
-            }
-            if ($interaction->data->custom_id === LfgSlashCommandListener::I_WANT_TO_GO_BTN) {
-                LfgSlashCommandListener::iWantToGoBtn($interaction, $discord);
-                $interaction->acknowledge();
-                return;
-            }
-            LfgSlashCommandListener::act($interaction);
-            LfgDeleteSlashCommandListener::act($interaction);
+            LfgSlashCommandListener::act($interaction, $discord);
+            LfgDeleteSlashCommandListener::act($interaction, $discord);
+            LfgEditSlashCommand::act($interaction, $discord);
         });
 
         $discord->run();

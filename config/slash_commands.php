@@ -18,5 +18,17 @@ return [
                 'required' => true
             ]
         ]
+    ],
+    [
+        'name' => 'lfgedit',
+        'description' => 'Змінити деякі дані в групі за ідентифікатором',
+        'options' => [
+            [
+                'name' => 'id',
+                'description' => 'Ідентифікатор групи (ID)',
+                'type' => Option::STRING,
+                'required' => true
+            ]
+        ]
     ]
 ];

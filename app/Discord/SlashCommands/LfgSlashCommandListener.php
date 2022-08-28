@@ -17,12 +17,15 @@ use Discord\Builders\Components\SelectMenu;
 use Discord\Builders\Components\TextInput;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
+use Discord\Factory\Factory;
 use Discord\Helpers\Collection;
 use Discord\InteractionType;
 use Discord\Parts\Channel\Message;
 use Discord\Parts\Embed\Embed;
 use Discord\Parts\Interactions\Interaction;
+use Discord\Parts\User\Member;
 use Discord\Parts\User\User;
+use Exception;
 
 class LfgSlashCommandListener implements SlashCommandListenerInterface
 {
@@ -39,9 +42,14 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
 
     private static array $buttons = [];
 
-    public static function act(Interaction $interaction): void
+    public static function act(Interaction $interaction, Discord $discord): void
     {
-        if ($interaction->type === InteractionType::APPLICATION_COMMAND && $interaction->data->name === self::LFG) {
+        if ($interaction->data->custom_id === LfgSlashCommandListener::I_WANT_TO_GO_BTN) {
+            LfgSlashCommandListener::iWantToGoBtn($interaction, $discord);
+            $interaction->acknowledge();
+        } else if ($interaction->type === InteractionType::MODAL_SUBMIT && $interaction->data->custom_id === LfgSlashCommandListener::LFG_MODAL) {
+            LfgSlashCommandListener::onModalSubmit($interaction, $discord);
+        } else if ($interaction->type === InteractionType::APPLICATION_COMMAND && $interaction->data->name === self::LFG) {
             self::showModal($interaction);
         } else if ($interaction->data->custom_id === self::RESERVE_BTN) {
             self::reserveBtn($interaction);
@@ -52,32 +60,89 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         } else if ($interaction->data->custom_id === self::REMOVE_GROUP_BTN) {
             self::removeGroupBtn($interaction);
             $interaction->acknowledge();
+        } else if ($interaction->data->custom_id === self::MANUAL_APPROVE_BTN) {
+            self::onManualApproveOrDecline($interaction, $discord);
+        } else if ($interaction->data->custom_id === self::MANUAL_DECLINE_BTN) {
+            self::onManualApproveOrDecline($interaction, $discord, false);
+        }
+    }
+
+    private static function onManualApproveOrDecline(Interaction $interaction, Discord $discord, bool $approve = true): void
+    {
+        list($channelId, $groupMessageId, $userId) = explode('|', $interaction->message->embeds->first()->footer->text);
+        $channel = $discord->getChannel($channelId);
+        $guild = $discord->guilds->get('id', $channel->guild_id);
+        try {
+            $guild->members->fetch($userId)->then(function (Member $member) use ($interaction, $discord, $groupMessageId, $channel, $approve) {
+                $channel->messages->fetch($groupMessageId)->then(function (Message $message) use ($interaction, $discord, $member, $approve) {
+                    // Fields in embed is in stdClass form, we need for them to be in array form.
+                    $messageStdClass = json_decode(json_encode($message));
+                    $wrongEmbedFields = $messageStdClass->embeds[0]->fields;
+                    $properEmbedFields = [];
+                    foreach ($wrongEmbedFields as $wrongEmbedField) {
+                        $properEmbedFields[] = $wrongEmbedField;
+                    }
+                    $messageStdClass->embeds[0]->fields = $properEmbedFields;
+
+                    $factory = new Factory($discord, $discord->getHttpClient());
+                    /** @var Interaction $newInteraction */
+                    $newInteraction = $factory->create(Interaction::class, [
+                        'type' => InteractionType::MESSAGE_COMPONENT,
+                        'message' => $messageStdClass,
+                        'member' => json_decode(json_encode($member))
+                    ], true);
+
+                    $lfg = self::getLfgFromEmbed($newInteraction);
+                    $approvedParticipantId = $member->user->id;
+                    $participantsInQueue = $lfg->participantsInQueue;
+                    $part = $participantsInQueue->get($participantsInQueue->pluck('user_id')->search($approvedParticipantId));
+
+                    if ($approve) {
+                        $part->approved = true;
+                        $part->save();
+                        $interaction->message->edit(MessageBuilder::new()->setContent('Ухвалено!')->_setFlags(Message::FLAG_SUPPRESS_EMBED));
+                        $interaction->message->delayedDelete(5000);
+                        self::iWantToGoBtn($newInteraction, $discord);
+                    } else {
+                        $part->declined = true;
+                        $part->save();
+                        $interaction->message->edit(MessageBuilder::new()->setContent('Відхилено!')->_setFlags(Message::FLAG_SUPPRESS_EMBED));
+                        $interaction->message->delayedDelete(5000);
+                    }
+                });
+            });
+        } catch (Exception $e) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Щось пішло не так...'), true);
         }
     }
 
     private static function showModal(Interaction $interaction): void
     {
-        $activityInput = TextInput::new('Ім\'я активності', TextInput::STYLE_SHORT, 'activity_name')
-            ->setPlaceholder('Ім\'я активності');
+        list($activityInput, $descriptionInput, $dateInput, $groupSizeInput) = self::buildModalInputs();
         $activityRow = ActionRow::new()->addComponent($activityInput);
-
-        $descriptionInput = TextInput::new('Опис активності', TextInput::STYLE_PARAGRAPH, 'description')
-            ->setPlaceholder('Опис активності');
         $descriptionRow = ActionRow::new()->addComponent($descriptionInput);
-
-        $dateInput = TextInput::new('Дата початку (Г:ХВ число місяць)', TextInput::STYLE_SHORT, 'date')
-            ->setPlaceholder('Приклади: 9:30 4 12, 20:00 15 7, 23:40 28 9');
         $dateRow = ActionRow::new()->addComponent($dateInput);
-
-        $groupSizeInput = TextInput::new('Величина групи', TextInput::STYLE_SHORT, 'group_size')
-            ->setPlaceholder('Число учасників у групі');
         $groupSizeRow = ActionRow::new()->addComponent($groupSizeInput);
 
         $interaction->showModal(
             'Створення Групи',
-            'lfg_modal',
+            self::LFG_MODAL,
             [$activityRow, $descriptionRow, $dateRow, $groupSizeRow]
         );
+    }
+
+    public static function buildModalInputs(): array
+    {
+        $activityInput = TextInput::new('Ім\'я активності', TextInput::STYLE_SHORT, 'activity_name')
+            ->setPlaceholder('Ім\'я активності');
+        $descriptionInput = TextInput::new('Опис активності', TextInput::STYLE_PARAGRAPH, 'description')
+            ->setPlaceholder('Опис активності');
+        $dateInput = TextInput::new('Дата початку (Г:ХВ число місяць)', TextInput::STYLE_SHORT, 'date')
+            ->setPlaceholder('Приклади: 9:30 4 12, 20:00 15 7, 23:40 28 9');
+        $groupSizeInput = TextInput::new('Величина групи', TextInput::STYLE_SHORT, 'group_size')
+            ->setPlaceholder('Число учасників у групі');
+
+        return [$activityInput, $descriptionInput, $dateInput, $groupSizeInput];
     }
 
     public static function onModalSubmit(Interaction $interaction, Discord $discord): void
@@ -144,8 +209,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
 
             $type = $interaction->data->custom_id === ActivityTypes::RAID_SELECT ? ActivityTypes::RAID : $interaction->data->custom_id;
             $raidType = $interaction->data->custom_id === ActivityTypes::RAID_SELECT ? $interaction->data->values[0] : null;
-            $date = DateTime::createFromFormat('G:i j n O', trim($components['date']) . ' +0300');
-            $date = $date === false ? DateTime::createFromFormat('G:i O', trim($components['date']) . ' +0300') : $date;
+            $date = self::createFromLfgDate($components['date']);
             if ($date === false) {
                 $interaction->updateMessage(MessageBuilder::new()->setContent('Неправильний формат дати. Формат: Г:ХВ (години:хвилини у 24 годинному форматі) число місяць (наприклад: 9:30 4 12, 20:00 15 7, 13:30 22 9).'));
                 return;
@@ -161,7 +225,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 'owner' => $owner,
                 'title' => $title,
                 'description' => $description,
-                'group_size' => $groupSize === 0 ? 6 : $groupSize,
+                'group_size' => ($groupSize < 1 || $groupSize > 42) ? 42 : $groupSize,
                 'type' => $type,
                 'manual' => $manual,
                 'time_of_start' => $date
@@ -215,6 +279,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             ActivityTypes::RAID_LW => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_LW]['image'],
             ActivityTypes::RAID_VOD => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_VOD]['image'],
             ActivityTypes::RAID_VOG => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_VOG]['image'],
+            ActivityTypes::RAID_KF => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_KF]['image'],
             default => '',
         };
     }
@@ -229,8 +294,10 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         $lfg = self::getLfgFromEmbed($interaction);
         $participants = $lfg->participants;
         $participantsInQueue = $lfg->participantsInQueue;
-        $isApprovedInQueue = $participantsInQueue->get($participantsInQueue->pluck('user_id')->search($userId));
-        $isApprovedInQueue = $isApprovedInQueue ? $isApprovedInQueue->approved : false;
+        $isApprovedInQueue = $participantsInQueue->search(function (ParticipantInQueue $item) use ($userId) {
+            return $item->user_id === $userId && (bool)$item->approved === true;
+        });
+        $isApprovedInQueue = $isApprovedInQueue !== false ? $participantsInQueue[$isApprovedInQueue]->approved : false;
 
         if (
             $lfg->manual
@@ -251,21 +318,29 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $lfg->participantsInQueue()->save(new ParticipantInQueue(['user_id' => $userId]));
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Зачекай доки ініціатор додасть тебе до учасників групи.'), true);
 
-            $manualApproveBtn = Button::new(Button::STYLE_SUCCESS, self::MANUAL_APPROVE_BTN . $userId)->setLabel('Ухвалити');
-            $manualDeclineBtn = Button::new(Button::STYLE_DANGER, self::MANUAL_DECLINE_BTN . $userId)->setLabel('Відхилити');
+            $manualApproveBtn = Button::new(Button::STYLE_SUCCESS, self::MANUAL_APPROVE_BTN)
+                ->setLabel('Ухвалити')
+                ->setEmoji('✅');
+            $manualDeclineBtn = Button::new(Button::STYLE_DANGER, self::MANUAL_DECLINE_BTN)
+                ->setLabel('Відхилити')
+                ->setEmoji('⛔');
 
-            self::$buttons[self::MANUAL_APPROVE_BTN . $userId] = $manualApproveBtn;
-            self::$buttons[self::MANUAL_DECLINE_BTN . $userId] = $manualDeclineBtn;
             $buttonActionRow = ActionRow::new();
             $buttonActionRow->addComponent($manualApproveBtn)->addComponent($manualDeclineBtn);
-            $manualApproveBtn->setListener(self::onManualApprove($interaction, $discord), $discord, true);
-            $manualDeclineBtn->setListener(self::onManualApprove($interaction, $discord), $discord, true);
+
+            $embed = new Embed($discord);
+            $embed->setColor('#b81818');
+            $embed->setTitle('Нова заявка на участь у групі');
+            $embed->addFieldValues('Сервер', $interaction->guild->name);
+            $embed->addFieldValues('Канал', '#' . $interaction->channel->name);
+            $embed->addFieldValues('Ім\'я активності', $interaction->message->embeds->first()->title);
+            $embed->addFieldValues('Ім\'я учасника', '**' . ($interaction->member->nick ?? $interaction->member->username) . "** (<@$userId>)");
+            $embed->setFooter($interaction->channel->id . '|' . $interaction->message->id . '|' . $userId);
 
             $ownerUser = new User($discord, ['id' => $lfg->owner]);
             $ownerUser->sendMessage(
                 MessageBuilder::new()
-                    ->setContent('Сервер: ' . $interaction->guild->name . "\nІм'я активності: " . $interaction->message->embeds->first()->title . "\nНова заявка на участь від **" . ($interaction->member->nick ?? $interaction->member->username) . "** (<@$userId>) у каналі #" . $interaction->channel->name)
-                    ->setNonce($userId)
+                    ->addEmbed($embed)
                     ->addComponent($buttonActionRow)
             );
             return;
@@ -352,34 +427,6 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 ->addEmbed($theEmbed)
                 ->addComponent($embedActionRow)
         );
-    }
-
-    private static function onManualApprove(Interaction $lfgInteraction, Discord $discord): Closure
-    {
-        return function (Interaction $interaction) use ($lfgInteraction, $discord) {
-            $lfg = self::getLfgFromEmbed($lfgInteraction);
-            $approvedParticipantId = $lfgInteraction->member->user->id;
-            $participantsInQueue = $lfg->participantsInQueue;
-            $part = $participantsInQueue->get($participantsInQueue->pluck('user_id')->search($approvedParticipantId));
-
-            if ($interaction->data->custom_id === (self::MANUAL_APPROVE_BTN . $approvedParticipantId)) {
-                $part->approved = true;
-                $part->save();
-                $interaction->updateMessage(MessageBuilder::new()->setContent('Ухвалено!'));
-                $interaction->message->delayedDelete(5000);
-                self::iWantToGoBtn($lfgInteraction, $discord);
-            } else {
-                $part->declined = true;
-                $part->save();
-                $interaction->updateMessage(MessageBuilder::new()->setContent('Відхилено!'));
-                $interaction->message->delayedDelete(5000);
-            }
-
-            self::$buttons[self::MANUAL_APPROVE_BTN . $approvedParticipantId]->removeListener();
-            self::$buttons[self::MANUAL_DECLINE_BTN . $approvedParticipantId]->removeListener();
-            unset(self::$buttons[self::MANUAL_APPROVE_BTN . $approvedParticipantId]);
-            unset(self::$buttons[self::MANUAL_DECLINE_BTN . $approvedParticipantId]);
-        };
     }
 
     private static function reserveBtn(Interaction $interaction): void
@@ -522,5 +569,11 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         $match = [];
         preg_match('/ID:\s(.*?)\s|/', $interaction->message->embeds[0]->footer->text, $match);
         return Lfg::find($match[1]);
+    }
+
+    public static function createFromLfgDate(string $date): DateTime|false
+    {
+        $result = DateTime::createFromFormat('G:i j n O', trim($date) . ' +0300');
+        return $result === false ? DateTime::createFromFormat('G:i O', trim($date) . ' +0300') : $result;
     }
 }
