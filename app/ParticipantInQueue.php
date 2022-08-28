@@ -5,6 +5,11 @@ namespace App;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property mixed $user_id
+ * @property mixed $declined
+ * @property mixed $approved
+ */
 class ParticipantInQueue extends Model
 {
     use HasFactory;

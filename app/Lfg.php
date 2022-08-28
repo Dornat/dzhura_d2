@@ -2,6 +2,8 @@
 
 namespace App;
 
+use DateTime;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,6 +24,8 @@ use Illuminate\Support\Str;
  * @property Collection $reserve
  * @property string $type
  * @property boolean $manual
+ * @property string $discord_id
+ * @property DateTime|false|mixed $time_of_start
  */
 class Lfg extends Model
 {
@@ -59,5 +63,14 @@ class Lfg extends Model
     public function reserve(): HasMany
     {
         return $this->hasMany(Reserve::class, 'lfg_uuid', 'uuid');
+    }
+
+    protected function timeOfStart(): Attribute
+    {
+        return Attribute::get(
+            function ($value) {
+                return (new DateTime($value))->format('G:i j n');
+            }
+        );
     }
 }

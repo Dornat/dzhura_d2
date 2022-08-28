@@ -4,6 +4,7 @@ namespace App\Discord\SlashCommands;
 
 use App\Lfg;
 use Discord\Builders\MessageBuilder;
+use Discord\Discord;
 use Discord\InteractionType;
 use Discord\Parts\Interactions\Interaction;
 
@@ -11,7 +12,7 @@ class LfgDeleteSlashCommandListener implements SlashCommandListenerInterface
 {
     public const LFG_DELETE = 'lfgdelete';
 
-    public static function act(Interaction $interaction): void
+    public static function act(Interaction $interaction, Discord $discord): void
     {
         if (!($interaction->type === InteractionType::APPLICATION_COMMAND && $interaction->data->name === self::LFG_DELETE)) {
             return;
@@ -23,6 +24,7 @@ class LfgDeleteSlashCommandListener implements SlashCommandListenerInterface
         $lfg = Lfg::find($groupId);
         if (empty($lfg)) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Групи з таким ідентифікатором не існує.'), true);
+            return;
         }
 
         if ($lfg->owner === $userId) {

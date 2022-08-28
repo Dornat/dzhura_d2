@@ -2,10 +2,10 @@
 
 namespace App\Discord\SlashCommands;
 
-use Closure;
+use Discord\Discord;
 use Discord\Parts\Interactions\Interaction;
 
 interface SlashCommandListenerInterface
 {
-    public static function act(Interaction $interaction): void;
+    public static function act(Interaction $interaction, Discord $discord): void;
 }
