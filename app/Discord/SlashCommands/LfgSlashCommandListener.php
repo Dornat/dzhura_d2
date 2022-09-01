@@ -77,6 +77,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 $channel->messages->fetch($groupMessageId)->then(function (Message $message) use ($interaction, $discord, $member, $approve) {
                     // Fields in embed is in stdClass form, we need for them to be in array form.
                     $messageStdClass = json_decode(json_encode($message));
+                    unset($messageStdClass->reactions);
                     $wrongEmbedFields = $messageStdClass->embeds[0]->fields;
                     $properEmbedFields = [];
                     foreach ($wrongEmbedFields as $wrongEmbedField) {
