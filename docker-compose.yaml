@@ -5,14 +5,16 @@ services:
       - ./.env
     volumes:
       - ./.:/var/www/html
+    ports:
+      - 8081:8080
 
   db:
-      image: mariadb
-      restart: always
-      environment:
-          MYSQL_ROOT_PASSWORD: toor
-          MYSQL_DATABASE: d2
-          MYSQL_USER: d2
-          MYSQL_PASSWORD: d2
-      ports:
-          - 7001:3306
+    image: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: toor
+      MYSQL_DATABASE: d2
+      MYSQL_USER: d2
+      MYSQL_PASSWORD: d2
+    ports:
+      - 7001:3306

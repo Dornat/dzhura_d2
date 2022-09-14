@@ -19,7 +19,7 @@ RUN apk --no-cache add git pcre-dev ${PHPIZE_DEPS} \
 RUN echo -e "xdebug.mode=debug\n" \
     >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
 
-EXPOSE 9003
+EXPOSE 9003 8080
 
 # Create a user from which all of the actions will be done inside the container.
 RUN addgroup -g 1000 -S docker

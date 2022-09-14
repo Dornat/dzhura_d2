@@ -5,18 +5,21 @@ namespace App\Commands;
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
 use App\Discord\SlashCommands\LfgEditSlashCommand;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
-use Discord\InteractionType;
-use Discord\Parts\Channel\Message;
+use App\Discord\SlashCommands\VoiceChannelCreateSlashCommand;
+use App\Discord\SlashCommands\VoiceChannelDeleteSlashCommand;
 use Discord\Parts\Interactions\Command\Command as DiscordCommand;
 use Discord\Discord;
 use Discord\Exceptions\IntentException;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Parts\User\Activity;
 use Discord\WebSockets\Event;
-use Discord\WebSockets\Intents;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use LaravelZero\Framework\Commands\Command;
+use Psr\Http\Message\ServerRequestInterface;
+use React\Http\HttpServer;
+use React\Http\Message\Response;
+use React\Socket\SocketServer;
 
 class Run extends Command
 {
@@ -58,12 +61,23 @@ class Run extends Command
                 $slashCommand = new DiscordCommand($discord, $opts);
                 $discord->application->commands->save($slashCommand);
             }
+//
+//            $http = new HttpServer(function (ServerRequestInterface $request) {
+//                return Response::plaintext(
+//                    "Hello World!\n"
+//                );
+//            });
+//
+//            $socket = new SocketServer('127.0.0.1:8080');
+//            $http->listen($socket);
         });
 
         $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Discord $discord) {
             LfgSlashCommandListener::act($interaction, $discord);
             LfgDeleteSlashCommandListener::act($interaction, $discord);
             LfgEditSlashCommand::act($interaction, $discord);
+            VoiceChannelCreateSlashCommand::act($interaction, $discord);
+            VoiceChannelDeleteSlashCommand::act($interaction, $discord);
         });
 
         $discord->run();

@@ -30,5 +30,41 @@ return [
                 'required' => true
             ]
         ]
+    ],
+    [
+        'name' => 'voicecreate',
+        'description' => 'Створити голосовий канал',
+        'options' => [
+            [
+                'name' => 'name',
+                'description' => 'Назва голосового каналу',
+                'type' => Option::STRING,
+                'required' => true
+            ],
+            [
+                'name' => 'user_limit',
+                'description' => 'Кількість учасників',
+                'type' => Option::INTEGER,
+                'required' => true
+            ],
+            [
+                'name' => 'category',
+                'description' => 'Повна назва категорії, до якої додати голосовий канал',
+                'type' => Option::STRING,
+                'required' => false
+            ]
+        ]
+    ],
+    [
+        'name' => 'voicedelete',
+        'description' => 'Видалити голосовий канал',
+        'options' => [
+            [
+                'name' => 'id',
+                'description' => 'Ідентифікатор голосового каналу',
+                'type' => Option::STRING,
+                'required' => false
+            ]
+        ]
     ]
 ];
