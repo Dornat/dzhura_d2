@@ -7,6 +7,9 @@ use App\Discord\SlashCommands\LfgEditSlashCommand;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
 use App\Discord\SlashCommands\VoiceChannelCreateSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelDeleteSlashCommand;
+use App\Lfg;
+use App\VoiceChannel;
+use Discord\Parts\Channel\Channel;
 use Discord\Parts\Interactions\Command\Command as DiscordCommand;
 use Discord\Discord;
 use Discord\Exceptions\IntentException;
@@ -70,6 +73,31 @@ class Run extends Command
 //
 //            $socket = new SocketServer('127.0.0.1:8080');
 //            $http->listen($socket);
+        });
+
+        $discord->on(Event::MESSAGE_DELETE, function ($message, Discord $discord) {
+            $lfg = Lfg::where('discord_id', $message->id)->first();
+            if (!empty($lfg)) {
+                $lfg->delete();
+            }
+        });
+
+        $discord->on(Event::MESSAGE_DELETE_BULK, function ($messages, Discord $discord) {
+            $ids = array_column($messages, 'id');
+            $lfgs = Lfg::whereIn('discord_id', $ids)->get();
+            if (!$lfgs->isEmpty()) {
+                foreach ($lfgs as $lfg) {
+                    $lfg->delete();
+                }
+            }
+        });
+
+
+        $discord->on(Event::CHANNEL_DELETE, function (Channel $channel, Discord $discord) {
+            $vc = VoiceChannel::where('vc_discord_id', $channel->id)->first();
+            if (!empty($vc)) {
+                $vc->delete();
+            }
         });
 
         $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Discord $discord) {

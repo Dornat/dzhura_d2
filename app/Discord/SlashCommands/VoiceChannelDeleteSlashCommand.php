@@ -25,15 +25,20 @@ class VoiceChannelDeleteSlashCommand implements SlashCommandListenerInterface
         $id = $interaction->data->options['id'] ? $interaction->data->options['id']->value : $interaction->channel_id;
 
         $vc = VoiceChannel::where('vc_discord_id', $id)->first();
-        if ($interaction->member->user->id !== $vc->owner) {
-            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Ти не можеш видалити голосовий чат, тому що ти не є його власником.'), true);
-            $interaction->acknowledge();
+
+        if (is_null($vc)) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Неправильний ID голосового каналу.'), true);
+            return;
+        }
+
+        if ($interaction->member->user->id !== $vc->owner && !$interaction->member->permissions->administrator) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Ти не можеш видалити голосовий канал, тому що ти не є його власником.'), true);
             return;
         }
 
         $interaction->guild->channels->delete($id)->done(function () use ($interaction, $vc) {
             $vc->delete();
-            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Чат було успішно видалено!'), true);
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Голосовий канал було успішно видалено!'), true);
             $interaction->acknowledge();
         });
     }

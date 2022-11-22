@@ -19,8 +19,14 @@ class SlashCommandHelper
     {
         $embedActionRow = ActionRow::new();
         foreach ($componentRepository as $component) {
-            $embedActionRow
-                ->addComponent(Button::new($component->style, $component->custom_id)->setLabel($component->label));
+            $btn = Button::new($component->style, $component->custom_id);
+            if ($component->label) {
+                $btn->setLabel($component->label);
+            }
+            if ($component->emoji) {
+                $btn->setEmoji($component->emoji);
+            }
+            $embedActionRow->addComponent($btn);
         }
 
         return $embedActionRow;

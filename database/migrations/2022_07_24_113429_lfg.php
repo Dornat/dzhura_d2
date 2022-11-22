@@ -15,6 +15,8 @@ class Lfg extends Migration
         Schema::create('lfg', function (Blueprint $table) {
             $table->uuid('uuid')->primary()->default(DB::raw('(UUID())'));
             $table->string('discord_id')->nullable();
+            $table->string('channel_id');
+            $table->string('guild_id');
             $table->string('owner');
             $table->string('title');
             $table->string('description');

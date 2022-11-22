@@ -8,24 +8,29 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
  * @method static create(array $array)
  * @method static where(string $string, mixed $int)
  * @method static find(mixed $int)
+ * @method static whereIn(string $string, array $ids)
  * @property string $uuid
+ * @property string $discord_id
+ * @property string $channel_id
+ * @property string $guild_id
  * @property string $owner
  * @property string $title
  * @property string $description
  * @property int $group_size
+ * @property DateTime|false|mixed $time_of_start
+ * @property string $type
+ * @property boolean $manual
  * @property Collection $participants
  * @property Collection $participantsInQueue
  * @property Collection $reserve
- * @property string $type
- * @property boolean $manual
- * @property string $discord_id
- * @property DateTime|false|mixed $time_of_start
+ * @property VoiceChannel $vc
  */
 class Lfg extends Model
 {
@@ -39,7 +44,7 @@ class Lfg extends Model
 
     protected $keyType = 'string';
 
-    protected $fillable = ['owner', 'title', 'description', 'group_size', 'type', 'manual', 'time_of_start'];
+    protected $fillable = ['channel_id', 'guild_id', 'owner', 'title', 'description', 'group_size', 'time_of_start', 'type', 'manual'];
 
     public static function boot()
     {
@@ -63,6 +68,11 @@ class Lfg extends Model
     public function reserve(): HasMany
     {
         return $this->hasMany(Reserve::class, 'lfg_uuid', 'uuid');
+    }
+
+    public function vc(): HasOne
+    {
+        return $this->hasOne(VoiceChannel::class, 'lfg_uuid', 'uuid');
     }
 
     protected function timeOfStart(): Attribute

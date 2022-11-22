@@ -52,7 +52,13 @@ return [
                 'description' => 'Повна назва категорії, до якої додати голосовий канал',
                 'type' => Option::STRING,
                 'required' => false
-            ]
+            ],
+            [
+                'name' => 'lfg_id',
+                'description' => 'Ідендифікатор групи (ID), до якого можна прив\'язати голосовий канал',
+                'type' => Option::STRING,
+                'required' => false
+            ],
         ]
     ],
     [

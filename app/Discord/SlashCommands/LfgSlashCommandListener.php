@@ -4,10 +4,12 @@ namespace App\Discord\SlashCommands;
 
 use App\Discord\Helpers\SlashCommandHelper;
 use App\Discord\SlashCommands\Lfg\ActivityTypes;
+use App\Discord\SlashCommands\Lfg\TaggingFrases;
 use App\Lfg;
 use App\Participant;
 use App\ParticipantInQueue;
 use App\Reserve;
+use App\VoiceChannel;
 use Closure;
 use DateTime;
 use Discord\Builders\Components\ActionRow;
@@ -37,6 +39,8 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
     public const MANUAL_BTN = 'manual_btn';
     public const MANUAL_APPROVE_BTN = 'manual_approve_btn';
     public const MANUAL_DECLINE_BTN = 'manual_decline_btn';
+    public const TAG_PARTICIPANTS_BTN = 'tag_participants_btn';
+    public const TAG_PARTICIPANTS_REMOVE_BTN = 'tag_participants_remove_btn';
     public const LFG = 'lfg';
     public const LFG_MODAL = 'lfg_modal';
 
@@ -64,6 +68,10 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             self::onManualApproveOrDecline($interaction, $discord);
         } else if ($interaction->data->custom_id === self::MANUAL_DECLINE_BTN) {
             self::onManualApproveOrDecline($interaction, $discord, false);
+        } else if ($interaction->data->custom_id === self::TAG_PARTICIPANTS_BTN) {
+            self::tagParticipantsBtn($interaction);
+        } else if ($interaction->data->custom_id === self::TAG_PARTICIPANTS_REMOVE_BTN) {
+            self::tagParticipantsRemoveBtn($interaction);
         }
     }
 
@@ -223,6 +231,8 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $manual = $components['manual'];
 
             $lfg = Lfg::create([
+                'channel_id' => $interaction->channel_id,
+                'guild_id' => $interaction->guild_id,
                 'owner' => $owner,
                 'title' => $title,
                 'description' => $description,
@@ -244,14 +254,16 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $iWantToGoBtn = Button::new(Button::STYLE_SUCCESS)->setLabel('Хочу піти')->setCustomId(self::I_WANT_TO_GO_BTN);
             $reserveBtn = Button::new(Button::STYLE_PRIMARY)->setLabel('Резерв')->setCustomId(self::RESERVE_BTN);
             $removeRegistrationBtn = Button::new(Button::STYLE_SECONDARY)->setLabel('Прибрати реєстрацію')->setCustomId(self::REMOVE_REGISTRATION_BTN);
-            $removeGroupBtn = Button::new(Button::STYLE_DANGER)->setLabel('Видалити групу')->setCustomId(self::REMOVE_GROUP_BTN);
+            $removeGroupBtn = Button::new(Button::STYLE_DANGER)->setEmoji('🗑')->setCustomId(self::REMOVE_GROUP_BTN);
+            $tagParticipantsBtn = Button::new(Button::STYLE_SECONDARY)->setEmoji('#⃣')->setCustomId(self::TAG_PARTICIPANTS_BTN);
 
             $embedActionRow = ActionRow::new();
             $embedActionRow
                 ->addComponent($iWantToGoBtn)
                 ->addComponent($reserveBtn)
                 ->addComponent($removeRegistrationBtn)
-                ->addComponent($removeGroupBtn);
+                ->addComponent($removeGroupBtn)
+                ->addComponent($tagParticipantsBtn);
 
             $embeddedMessage = MessageBuilder::new()->addEmbed($embed)->addComponent($embedActionRow);
 
@@ -553,16 +565,53 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         $interaction->message->edit(MessageBuilder::new()->addEmbed($theEmbed)->addComponent($embedActionRow));
     }
 
+    /**
+     * @throws Exception
+     */
     private static function removeGroupBtn(Interaction $interaction): void
     {
         $userId = $interaction->member->user->id;
         $lfg = self::getLfgFromEmbed($interaction);
-        if ($lfg->owner === $userId) {
+        if ($lfg->owner === $userId || $interaction->member->permissions->administrator) {
             $interaction->message->delete();
+            /** @var VoiceChannel $vc */
+            $vc = $lfg->vc()->get()->first();
+            if (!empty($vc)) {
+                $interaction->guild->channels->delete($vc->vc_discord_id);
+            }
             $lfg->delete();
         } else {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Тільки ініціатор може видалити групу. :man_shrugging:'), true);
         }
+    }
+
+    public static function tagParticipantsBtn(Interaction $interaction): void
+    {
+        $userId = $interaction->member->user->id;
+        $lfg = self::getLfgFromEmbed($interaction);
+        if ($lfg->owner === $userId) {
+            if ($lfg->participants->isEmpty()) {
+                $interaction->respondWithMessage(MessageBuilder::new()->setContent('Тут немає кого тегати. Рекомендую звернутися до окуліста. 🧐'), true);
+                return;
+            }
+            $partsString = SlashCommandHelper::assembleAtUsersString($lfg->participants->pluck('user_id')->toArray());
+            $interaction->respondWithMessage(
+                MessageBuilder::new()
+                    ->setContent(
+                        array_rand(array_flip(TaggingFrases::get())) . "\n\n" . $partsString
+                    )
+                    ->addComponent(
+                        ActionRow::new()->addComponent(Button::new(Button::STYLE_DANGER)->setEmoji('🗑')->setCustomId(self::TAG_PARTICIPANTS_REMOVE_BTN))
+                    )
+            );
+        } else {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Тільки ініціатор може тегати всіх учасників у групі. :man_shrugging:'), true);
+        }
+    }
+
+    public static function tagParticipantsRemoveBtn(Interaction $interaction): void
+    {
+        $interaction->message->delete();
     }
 
     public static function getLfgFromEmbed(Interaction $interaction): Lfg
@@ -574,7 +623,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
 
     public static function createFromLfgDate(string $date): DateTime|false
     {
-        $result = DateTime::createFromFormat('G:i j n O', trim($date) . ' +0300');
-        return $result === false ? DateTime::createFromFormat('G:i O', trim($date) . ' +0300') : $result;
+        $result = DateTime::createFromFormat('G:i j n O', trim($date) . ' +0200');
+        return $result === false ? DateTime::createFromFormat('G:i O', trim($date) . ' +0200') : $result;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Discord\SlashCommands;
 
+use App\Lfg;
 use App\VoiceChannel;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
@@ -26,8 +27,18 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
         $name = $interaction->data->options['name']->value;
         $userLimit = $interaction->data->options['user_limit']->value;
         $category = $interaction->data->options['category']?->value;
-        $channelCategory = null;
+        $lfgId = $interaction->data->options['lfg_id']?->value;
 
+        $lfg = null;
+        if (!is_null($lfgId)) {
+            $lfg = Lfg::find($lfgId);
+            if (empty($lfg)) {
+                $interaction->respondWithMessage(MessageBuilder::new()->setContent('Групи з таким ідентифікатором не існує.'), true);
+                return;
+            }
+        }
+
+        $channelCategory = null;
         if (!is_null($category)) {
             $channelCategory = $interaction->guild->channels->find(function (Channel $channel) use ($category) {
                 if ($channel->type === Channel::TYPE_CATEGORY && strtolower($channel->name) === strtolower($category)) {
@@ -44,14 +55,19 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
             'parent_id' => $channelCategory?->id
         ]);
 
-        $interaction->guild->channels->save($newVc)->done(function (Channel $channel) use ($interaction) {
-            $newVc = VoiceChannel::create([
+        $interaction->guild->channels->save($newVc)->done(function (Channel $channel) use ($interaction, $lfg) {
+            $newVc = new VoiceChannel([
                 'vc_discord_id' => $channel->id,
                 'owner' => $interaction->member->user->id,
                 'name' => $channel->name,
-                'user_limit' => $channel->user_limit
+                'user_limit' => $channel->user_limit,
             ]);
-            $newVc->save();
+
+            if (!is_null($lfg)) {
+                $lfg->vc()->save($newVc);
+            } else {
+                $newVc->save();
+            }
 
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Голосовий канал було успішно створено!'), true);
             $interaction->acknowledge();
