@@ -15,6 +15,7 @@ class VoiceChannels extends Migration
             $table->id();
             $table->uuid('lfg_uuid')->nullable();
             $table->foreign('lfg_uuid')->references('uuid')->on('lfg')->onUpdate('cascade')->onDelete('cascade');
+            $table->string('guild_id');
             $table->string('vc_discord_id');
             $table->string('owner');
             $table->string('name');

@@ -14,13 +14,13 @@ class ActivityTypes
     public const RAID_DSC = 'dsc';
     public const RAID_VOD = 'vod';
     public const RAID_KF = 'kf';
+    public const RAID_RON = 'ron';
 
     public const PVP = 'pvp';
     public const PVE = 'pve';
     public const GAMBIT = 'gambit';
     public const OTHER = 'other';
 
-    #[ArrayShape([self::RAID => "string[]", self::PVP => "string[]", self::PVE => "string[]", self::GAMBIT => "string[]", self::OTHER => "string[]"])]
     public static function list(): array
     {
         return [
@@ -30,6 +30,10 @@ class ActivityTypes
                 'color' => '#f0c907',
                 'types' => [
                     // In the order of appearance, newer at the top.
+                    self::RAID_RON => [
+                        'label' => 'Коріння жахів (RON)',
+                        'image' => 'https://i.ibb.co/64wKZ0m/4105275-rootofnightmares.jpg'
+                    ],
                     self::RAID_KF => [
                         'label' => 'Падіння короля (KF)',
                         'image' => 'https://cdn1.dotesports.com/wp-content/uploads/2022/08/26094927/destiny-2-kings-fall-1.jpg'
@@ -77,7 +81,8 @@ class ActivityTypes
             self::OTHER => [
                 'label' => 'Інше',
                 'thumbnail' => 'https://png2.cleanpng.com/sh/0cb9e768019d24d86f4e5055d88f6bf2/L0KzQYq3VsEyN517R91yc4Pzfri0hPV0fJpzkZ87LXTog8XwjwkufJlqReZqa3XxPbzwjvcucJJxh597ZXHmeH79ifRmNaV3eehubHX1PbXskCRqdqoyjORqboPzccPsjwQuaZ51ReJ3Zz3mfLr3ggJ1NZd3fZ8AY3bpRrS9g8NkQWNqT5CBNEK5QIiCVsE2PmE3TKU8MEi1RIm4TwBvbz==/kisspng-destiny-2-destiny-the-taken-king-halo-reach-vide-traveler-destiny-transparent-amp-png-clipart-fre-5cff6c6c3c92e7.6426079615602433082481.png',
-                'color' => '#878787'
+                'color' => '#878787',
+                'image' => 'https://media.tenor.com/LqQx8RLgO9sAAAAM/destiny2-destiny.gif'
             ]
         ];
     }

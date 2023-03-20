@@ -5,6 +5,7 @@ namespace App\Commands;
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
 use App\Discord\SlashCommands\LfgEditSlashCommand;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
+use App\Discord\SlashCommands\SettingsSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelCreateSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelDeleteSlashCommand;
 use App\Lfg;
@@ -92,7 +93,6 @@ class Run extends Command
             }
         });
 
-
         $discord->on(Event::CHANNEL_DELETE, function (Channel $channel, Discord $discord) {
             $vc = VoiceChannel::where('vc_discord_id', $channel->id)->first();
             if (!empty($vc)) {
@@ -101,6 +101,7 @@ class Run extends Command
         });
 
         $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Discord $discord) {
+            SettingsSlashCommand::act($interaction, $discord);
             LfgSlashCommandListener::act($interaction, $discord);
             LfgDeleteSlashCommandListener::act($interaction, $discord);
             LfgEditSlashCommand::act($interaction, $discord);

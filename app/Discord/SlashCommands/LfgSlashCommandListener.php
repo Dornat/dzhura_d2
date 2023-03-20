@@ -283,18 +283,13 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
 
     private static function getImageByType(string $type): string
     {
-        return match ($type) {
-            ActivityTypes::PVE => ActivityTypes::list()[ActivityTypes::PVE]['image'],
-            ActivityTypes::PVP => ActivityTypes::list()[ActivityTypes::PVP]['image'],
-            ActivityTypes::GAMBIT => ActivityTypes::list()[ActivityTypes::GAMBIT]['image'],
-            ActivityTypes::RAID_DSC => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_DSC]['image'],
-            ActivityTypes::RAID_GOS => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_GOS]['image'],
-            ActivityTypes::RAID_LW => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_LW]['image'],
-            ActivityTypes::RAID_VOD => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_VOD]['image'],
-            ActivityTypes::RAID_VOG => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_VOG]['image'],
-            ActivityTypes::RAID_KF => ActivityTypes::list()[ActivityTypes::RAID]['types'][ActivityTypes::RAID_KF]['image'],
-            default => '',
-        };
+        $isRaidType = in_array($type, array_keys(ActivityTypes::list()[ActivityTypes::RAID]['types']));
+
+        if ($isRaidType) {
+            return ActivityTypes::list()[ActivityTypes::RAID]['types'][$type]['image'];
+        } else {
+            return ActivityTypes::list()[$type]['image'];
+        }
     }
 
     public static function iWantToGoBtn(Interaction $interaction, Discord $discord): void

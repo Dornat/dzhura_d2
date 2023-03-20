@@ -17,5 +17,5 @@ class VoiceChannel extends Model
 
     protected $table = 'voice_channels';
 
-    protected $fillable = ['vc_discord_id', 'owner', 'name', 'user_limit'];
+    protected $fillable = ['guild_id', 'vc_discord_id', 'owner', 'name', 'user_limit'];
 }

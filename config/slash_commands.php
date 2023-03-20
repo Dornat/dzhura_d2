@@ -4,6 +4,10 @@ use Discord\Parts\Interactions\Command\Option;
 
 return [
     [
+        'name' => 'settings',
+        'description' => 'Налаштування бота'
+    ],
+    [
         'name' => 'lfg',
         'description' => 'Створити групу'
     ],

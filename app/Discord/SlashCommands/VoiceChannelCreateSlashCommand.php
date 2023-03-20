@@ -2,6 +2,7 @@
 
 namespace App\Discord\SlashCommands;
 
+use App\Discord\SlashCommands\Settings\SettingsObject;
 use App\Lfg;
 use App\VoiceChannel;
 use Discord\Builders\MessageBuilder;
@@ -24,6 +25,26 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
             return;
         }
 
+        $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
+        if (empty($settingsObject->vc->permittedRoles) && !$interaction->member->permissions->administrator) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Недостатньо дозволів для виконання операції. :thinking_face:'), true);
+            return;
+        }
+        if (!empty($settingsObject->vc->permittedRoles) && !$interaction->member->permissions->administrator) {
+            if (empty(array_intersect(array_column($settingsObject->vc->permittedRoles, 'id'), array_keys($interaction->member->roles->jsonSerialize())))) {
+                $interaction->respondWithMessage(MessageBuilder::new()->setContent('Недостатньо дозволів для виконання операції. :thinking_face:'), true);
+                return;
+            }
+        }
+
+        $createdVcsForOwnerCount = VoiceChannel::where('owner', $interaction->member->id)?->get()?->count();
+        if (!empty($createdVcsForOwnerCount)) {
+            if ($settingsObject->vc->channelLimit <= $createdVcsForOwnerCount) {
+                $interaction->respondWithMessage(MessageBuilder::new()->setContent('Досягнуто ліміт кількості створення голосових каналів. :face_with_monocle:'), true);
+                return;
+            }
+        }
+
         $name = $interaction->data->options['name']->value;
         $userLimit = $interaction->data->options['user_limit']->value;
         $category = $interaction->data->options['category']?->value;
@@ -36,6 +57,10 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
                 $interaction->respondWithMessage(MessageBuilder::new()->setContent('Групи з таким ідентифікатором не існує.'), true);
                 return;
             }
+        }
+
+        if (!empty($settingsObject->vc->defaultCategory) && is_null($category)) {
+            $category = $settingsObject->vc->defaultCategory;
         }
 
         $channelCategory = null;
@@ -57,6 +82,7 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
 
         $interaction->guild->channels->save($newVc)->done(function (Channel $channel) use ($interaction, $lfg) {
             $newVc = new VoiceChannel([
+                'guild_id' => $interaction->guild_id,
                 'vc_discord_id' => $channel->id,
                 'owner' => $interaction->member->user->id,
                 'name' => $channel->name,
