@@ -33,7 +33,7 @@ class LfgEditSlashCommand implements SlashCommandListenerInterface
             return;
         }
 
-        if ($lfg->owner === $userId) {
+        if ($lfg->owner === $userId || $interaction->member->permissions->administrator) {
             list($activityInput, $descriptionInput, $dateInput, $groupSizeInput) = LfgSlashCommandListener::buildModalInputs();
 
             $activityInput->setValue($lfg->title);

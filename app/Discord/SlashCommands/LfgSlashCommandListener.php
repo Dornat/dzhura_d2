@@ -584,7 +584,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
     {
         $userId = $interaction->member->user->id;
         $lfg = self::getLfgFromEmbed($interaction);
-        if ($lfg->owner === $userId) {
+        if ($lfg->owner === $userId || $interaction->member->permissions->administrator) {
             if ($lfg->participants->isEmpty()) {
                 $interaction->respondWithMessage(MessageBuilder::new()->setContent('Тут немає кого тегати. Рекомендую звернутися до окуліста. 🧐'), true);
                 return;
