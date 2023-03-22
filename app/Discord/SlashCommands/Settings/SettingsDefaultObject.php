@@ -10,7 +10,7 @@ class SettingsDefaultObject
             json_encode(
                 [
                     'global' => [
-                        'timeZone' => 'Europe/Kyiv'
+                        'timeZone' => 'UTC'
                     ],
                     'vc' => [
                         'permittedRoles' => [],

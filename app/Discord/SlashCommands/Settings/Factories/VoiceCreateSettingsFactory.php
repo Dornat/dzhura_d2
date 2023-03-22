@@ -97,7 +97,7 @@ class VoiceCreateSettingsFactory
         list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
         /** @var SettingsObject $settingsObject */
         $settingsObject->vc->defaultCategory = $collection[self::SETTINGS_VC_DEFAULT_CATEGORY_INPUT];
-        $settingsObject->vc->channelLimit = $collection[self::SETTINGS_VC_CHANNEL_LIMIT_INPUT];
+        $settingsObject->vc->channelLimit = (int)$collection[self::SETTINGS_VC_CHANNEL_LIMIT_INPUT];
 
         /** @var Setting $settingsModel object */
         $settingsModel->object = json_encode($settingsObject);

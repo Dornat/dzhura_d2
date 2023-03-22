@@ -32,7 +32,8 @@ class GlobalSettingsFactory
         $this->embed->addFieldValues('Часова зона', $settingsObject->global->timeZone);
 
         $this->timezoneSelect = SelectMenu::new(self::SETTINGS_GLOBAL_TIMEZONE_SELECT)->setPlaceholder('Часовий пояс, в якому буде жити бот');
-        $this->timezoneSelect->addOption(new Option('Київський час', 'Europe/Kyiv'));
+        $this->timezoneSelect->addOption(new Option('UTC', 'UTC'));
+        $this->timezoneSelect->addOption(new Option('Київський час', 'Europe/Kiev'));
         $this->timezoneSelect->addOption(new Option('Варшава', 'Europe/Warsaw'));
         $this->timezoneSelect->addOption(new Option('Берлін', 'Europe/Berlin'));
 
@@ -44,18 +45,8 @@ class GlobalSettingsFactory
 
     public static function actOnGlobalTimezoneSelect(Interaction $interaction, Discord $discord): void
     {
-        $settingsModel = Setting::where('guild_id', $interaction->guild_id)->first();
-
-        if (!is_null($settingsModel)) {
-            $settingsObject = new SettingsObject($settingsModel->object);
-            $settingsObject->global->timeZone = $interaction->data->values[0];
-        } else {
-            $settingsObject = SettingsDefaultObject::get();
-            $settingsModel = new Setting();
-            $settingsModel->guild_id = $interaction->guild_id;
-            $settingsModel->created_by = $interaction->member->user->id;
-            $settingsObject->global->timeZone = $interaction->data->values[0];
-        }
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->global->timeZone = $interaction->data->values[0];
 
         /** @var Setting $settingsModel object */
         $settingsModel->object = json_encode($settingsObject);

@@ -9,7 +9,7 @@ class GlobalSettingsObject implements SettingsObjectInterface
     public function __construct(string $json)
     {
         $data = json_decode($json, true);
-        $this->timeZone = $data['timeZone'] ?? 'Europe/Kyiv';
+        $this->timeZone = $data['timeZone'] ?? 'UTC';
     }
 
     public function jsonSerialize(): array

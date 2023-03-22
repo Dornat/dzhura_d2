@@ -3,6 +3,7 @@
 namespace App\Discord\SlashCommands;
 
 use App\Discord\Helpers\SlashCommandHelper;
+use App\Discord\SlashCommands\Settings\SettingsObject;
 use App\Lfg;
 use Discord\Builders\Components\ActionRow;
 use Discord\Builders\MessageBuilder;
@@ -64,10 +65,12 @@ class LfgEditSlashCommand implements SlashCommandListenerInterface
     private static function onModalSubmit(Lfg $lfg): callable
     {
         return function (Interaction $interaction, Collection $components) use ($lfg) {
-            $interaction->channel->messages->fetch($lfg->discord_id)->then(function (Message $message) use ($components, $lfg) {
+            $settingsObj = SettingsObject::getFromInteractionOrGetDefault($interaction);
+            $timeZone = $settingsObj->global->timeZone;
+            $interaction->channel->messages->fetch($lfg->discord_id)->then(function (Message $message) use ($components, $lfg, $timeZone) {
                 $updatedTitle = $components['activity_name']->value;
                 $updatedDescription = $components['description']->value;
-                $updatedDate = LfgSlashCommandListener::createFromLfgDate($components['date']->value);
+                $updatedDate = LfgSlashCommandListener::createFromLfgDate($components['date']->value, $timeZone);
                 $updatedGroupSize = $components['group_size']->value;
 
                 /** @var Embed $theEmbed */

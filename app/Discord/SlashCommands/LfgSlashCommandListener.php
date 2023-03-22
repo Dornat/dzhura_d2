@@ -5,6 +5,7 @@ namespace App\Discord\SlashCommands;
 use App\Discord\Helpers\SlashCommandHelper;
 use App\Discord\SlashCommands\Lfg\ActivityTypes;
 use App\Discord\SlashCommands\Lfg\TaggingFrases;
+use App\Discord\SlashCommands\Settings\SettingsObject;
 use App\Lfg;
 use App\Participant;
 use App\ParticipantInQueue;
@@ -12,6 +13,7 @@ use App\Reserve;
 use App\VoiceChannel;
 use Closure;
 use DateTime;
+use DateTimeZone;
 use Discord\Builders\Components\ActionRow;
 use Discord\Builders\Components\Button;
 use Discord\Builders\Components\Option;
@@ -216,9 +218,10 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 return;
             }
 
+            $settingsObj = SettingsObject::getFromInteractionOrGetDefault($interaction);
             $type = $interaction->data->custom_id === ActivityTypes::RAID_SELECT ? ActivityTypes::RAID : $interaction->data->custom_id;
             $raidType = $interaction->data->custom_id === ActivityTypes::RAID_SELECT ? $interaction->data->values[0] : null;
-            $date = self::createFromLfgDate($components['date']);
+            $date = self::createFromLfgDate($components['date'], $settingsObj->global->timeZone);
             if ($date === false) {
                 $interaction->updateMessage(MessageBuilder::new()->setContent('Неправильний формат дати. Формат: Г:ХВ (години:хвилини у 24 годинному форматі) число місяць (наприклад: 9:30 4 12, 20:00 15 7, 13:30 22 9).'));
                 return;
@@ -616,9 +619,9 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
         return Lfg::find($match[1]);
     }
 
-    public static function createFromLfgDate(string $date): DateTime|false
+    public static function createFromLfgDate(string $date, string $timeZone = 'UTC'): DateTime|false
     {
-        $result = DateTime::createFromFormat('G:i j n O', trim($date) . ' +0200');
-        return $result === false ? DateTime::createFromFormat('G:i O', trim($date) . ' +0200') : $result;
+        $result = DateTime::createFromFormat('G:i j n', trim($date), new DateTimeZone($timeZone));
+        return $result === false ? DateTime::createFromFormat('G:i', trim($date), new DateTimeZone($timeZone)) : $result;
     }
 }

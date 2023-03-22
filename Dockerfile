@@ -1,4 +1,4 @@
-FROM php:8.1.0RC3-cli-alpine3.14
+FROM php:8.1.9-cli-alpine3.16
 
 WORKDIR /var/www/html
 
@@ -8,7 +8,7 @@ COPY . /var/www/html
 COPY --from=composer:latest /usr/bin/composer /usr/local/bin/composer
 
 # Install xdebug.
-RUN apk --no-cache add git pcre-dev ${PHPIZE_DEPS} \
+RUN apk --no-cache add git pcre-dev ${PHPIZE_DEPS} linux-headers \
     && pecl install xdebug \
     && docker-php-ext-enable xdebug \
     && docker-php-ext-install pdo pdo_mysql \
