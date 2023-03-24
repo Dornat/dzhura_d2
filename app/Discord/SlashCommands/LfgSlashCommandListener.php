@@ -270,7 +270,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
 
             $embeddedMessage = MessageBuilder::new()->addEmbed($embed)->addComponent($embedActionRow);
 
-            $interaction->updateMessage(MessageBuilder::new()->setContent('Створення пройшло успішно! Тримай кавунця - :watermelon:'));
+            $interaction->updateMessage(MessageBuilder::new()->setComponents([])->setContent('Створення пройшло успішно! Тримай кавунця - :watermelon:'));
             $interaction->channel->sendMessage($embeddedMessage)->done(function (Message $message) use ($lfg) {
                 $lfg->discord_id = $message->id;
                 $lfg->save();

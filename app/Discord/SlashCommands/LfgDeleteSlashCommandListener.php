@@ -27,6 +27,11 @@ class LfgDeleteSlashCommandListener implements SlashCommandListenerInterface
             return;
         }
 
+        if (empty($lfg->discord_id)) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Група з таким ідентифікатором існує, але їй не був присвоєний `discord_id`. Цікава ситуація вийшла...'), true);
+            return;
+        }
+
         if ($lfg->owner === $userId || $interaction->member->permissions->administrator) {
             $interaction->channel->deleteMessages([$lfg->discord_id]);
             $lfg->delete();
