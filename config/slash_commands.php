@@ -66,6 +66,18 @@ return [
         ]
     ],
     [
+        'name' => 'voiceedit',
+        'description' => 'Редагувати голосовий канал',
+        'options' => [
+            [
+                'name' => 'id',
+                'description' => 'Ідентифікатор голосового каналу',
+                'type' => Option::STRING,
+                'required' => false
+            ]
+        ]
+    ],
+    [
         'name' => 'voicedelete',
         'description' => 'Видалити голосовий канал',
         'options' => [

@@ -26,6 +26,9 @@ class SlashCommandHelper
             if ($component->emoji) {
                 $btn->setEmoji($component->emoji);
             }
+            if ($component->url) {
+                $btn->setUrl($component->url);
+            }
             $embedActionRow->addComponent($btn);
         }
 
