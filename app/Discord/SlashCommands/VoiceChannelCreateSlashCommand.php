@@ -38,7 +38,7 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
         }
 
         $createdVcsForOwnerCount = VoiceChannel::where('owner', $interaction->member->id)?->get()?->count();
-        if (!empty($createdVcsForOwnerCount) || $createdVcsForOwnerCount === 0) {
+        if ((!empty($createdVcsForOwnerCount) || $createdVcsForOwnerCount === 0) && !$interaction->member->permissions->administrator) {
             if ($settingsObject->vc->channelLimit <= $createdVcsForOwnerCount) {
                 $interaction->respondWithMessage(MessageBuilder::new()->setContent('Досягнуто ліміту кількості створення голосових каналів. :face_with_monocle:'), true);
                 return;
@@ -46,7 +46,7 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
         }
 
         $name = $interaction->data->options['name']->value;
-        $userLimit = $interaction->data->options['user_limit']->value;
+        $userLimit = (int)$interaction->data->options['user_limit']->value;
         $category = $interaction->data->options['category']?->value;
         $lfgId = $interaction->data->options['lfg_id']?->value;
 
@@ -76,7 +76,7 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
         $newVc = $interaction->guild->channels->create([
             'name' => $name,
             'type' => Channel::TYPE_VOICE,
-            'user_limit' => $userLimit,
+            'user_limit' => max($userLimit, 1),
             'parent_id' => $channelCategory?->id
         ]);
 
@@ -87,6 +87,7 @@ class VoiceChannelCreateSlashCommand implements SlashCommandListenerInterface
                 'owner' => $interaction->member->user->id,
                 'name' => $channel->name,
                 'user_limit' => $channel->user_limit,
+                'category' => $channel->parent_id
             ]);
 
             if (!is_null($lfg)) {

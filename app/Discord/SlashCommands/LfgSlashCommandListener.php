@@ -24,6 +24,8 @@ use Discord\Discord;
 use Discord\Factory\Factory;
 use Discord\Helpers\Collection;
 use Discord\InteractionType;
+use Discord\Parts\Channel\Channel;
+use Discord\Parts\Channel\Invite;
 use Discord\Parts\Channel\Message;
 use Discord\Parts\Embed\Embed;
 use Discord\Parts\Interactions\Interaction;
@@ -43,6 +45,8 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
     public const MANUAL_DECLINE_BTN = 'manual_decline_btn';
     public const TAG_PARTICIPANTS_BTN = 'tag_participants_btn';
     public const TAG_PARTICIPANTS_REMOVE_BTN = 'tag_participants_remove_btn';
+    public const VOICE_CHANNEL_BTN = 'voice_channel_btn';
+    public const VOICE_CHANNEL_MODAL = 'voice_channel_modal';
     public const LFG = 'lfg';
     public const LFG_MODAL = 'lfg_modal';
 
@@ -74,6 +78,8 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             self::tagParticipantsBtn($interaction);
         } else if ($interaction->data->custom_id === self::TAG_PARTICIPANTS_REMOVE_BTN) {
             self::tagParticipantsRemoveBtn($interaction);
+        } else if ($interaction->data->custom_id === self::VOICE_CHANNEL_BTN) {
+            self::voiceChannelBtn($interaction);
         }
     }
 
@@ -259,6 +265,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $removeRegistrationBtn = Button::new(Button::STYLE_SECONDARY)->setLabel('Прибрати реєстрацію')->setCustomId(self::REMOVE_REGISTRATION_BTN);
             $removeGroupBtn = Button::new(Button::STYLE_DANGER)->setEmoji('🗑')->setCustomId(self::REMOVE_GROUP_BTN);
             $tagParticipantsBtn = Button::new(Button::STYLE_SECONDARY)->setEmoji('#⃣')->setCustomId(self::TAG_PARTICIPANTS_BTN);
+            $voiceChannelBtn = Button::new(Button::STYLE_PRIMARY)->setEmoji('🔊')->setCustomId(self::VOICE_CHANNEL_BTN);
 
             $embedActionRow = ActionRow::new();
             $embedActionRow
@@ -268,7 +275,11 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
                 ->addComponent($removeGroupBtn)
                 ->addComponent($tagParticipantsBtn);
 
-            $embeddedMessage = MessageBuilder::new()->addEmbed($embed)->addComponent($embedActionRow);
+            $embedActionRow2 = ActionRow::new();
+            $embedActionRow2
+                ->addComponent($voiceChannelBtn);
+
+            $embeddedMessage = MessageBuilder::new()->addEmbed($embed)->addComponent($embedActionRow)->addComponent($embedActionRow2);
 
             $interaction->updateMessage(MessageBuilder::new()->setComponents([])->setContent('Створення пройшло успішно! Тримай кавунця - :watermelon:'));
             $interaction->channel->sendMessage($embeddedMessage)->done(function (Message $message) use ($lfg) {
@@ -431,12 +442,15 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $theEmbed->addField($field);
         }
 
-        $embedActionRow = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($interaction->message->components->first()->components);
+        $embedActionRows = [];
+        foreach ($interaction->message->components as $component) {
+            $embedActionRows[] = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($component->components);
+        }
 
         $interaction->message->edit(
             MessageBuilder::new()
                 ->addEmbed($theEmbed)
-                ->addComponent($embedActionRow)
+                ->setComponents($embedActionRows)
         );
     }
 
@@ -488,9 +502,11 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $theEmbed->addField($field);
         }
 
-        $embedActionRow = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($interaction->message->components->first()->components);
-
-        $interaction->message->edit(MessageBuilder::new()->addEmbed($theEmbed)->addComponent($embedActionRow));
+        $embedActionRows = [];
+        foreach ($interaction->message->components as $component) {
+            $embedActionRows[] = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($component->components);
+        }
+        $interaction->message->edit(MessageBuilder::new()->addEmbed($theEmbed)->setComponents($embedActionRows));
     }
 
     private static function removeRegistrationBtn(Interaction $interaction): void
@@ -558,9 +574,11 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $theEmbed->addField($field);
         }
 
-        $embedActionRow = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($interaction->message->components->first()->components);
-
-        $interaction->message->edit(MessageBuilder::new()->addEmbed($theEmbed)->addComponent($embedActionRow));
+        $embedActionRows = [];
+        foreach ($interaction->message->components as $component) {
+            $embedActionRows[] = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($component->components);
+        }
+        $interaction->message->edit(MessageBuilder::new()->addEmbed($theEmbed)->setComponents($embedActionRows));
     }
 
     /**
@@ -610,6 +628,115 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
     public static function tagParticipantsRemoveBtn(Interaction $interaction): void
     {
         $interaction->message->delete();
+    }
+
+    public static function voiceChannelBtn(Interaction $interaction): void
+    {
+        $userId = $interaction->member->user->id;
+        $lfg = self::getLfgFromEmbed($interaction);
+
+        if (is_null($lfg->vc) && ($lfg->owner === $userId || $interaction->member->permissions->administrator)) {
+            $vcName = TextInput::new('Ім\'я каналу', TextInput::STYLE_SHORT, 'channel_name')
+                ->setPlaceholder('Ім\'я каналу');
+            $vcNameRow = ActionRow::new()->addComponent($vcName);
+
+            $userLimit = TextInput::new('Кількість учасників', TextInput::STYLE_SHORT, 'user_limit')
+                ->setPlaceholder('Кількість учасників');
+            $userLimitRow = ActionRow::new()->addComponent($userLimit);
+
+            $interaction->showModal(
+                'Створення голосового каналу для групи',
+                self::VOICE_CHANNEL_MODAL,
+                [$vcNameRow, $userLimitRow],
+                self::onVCModalSubmit($lfg, $interaction)
+            );
+        } else {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для цієї групи ще не було створено голосового каналу, в який ти можеш додатись. :man_shrugging:'), true);
+        }
+    }
+
+    public static function onVCModalSubmit(Lfg $lfg, Interaction $lfgInteraction): callable
+    {
+        return function (Interaction $interaction, Collection $components) use ($lfg, $lfgInteraction) {
+            $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
+            $category = $settingsObject->vc->defaultCategory;
+            $channelName = $components['channel_name']->value;
+            $userLimit = (int)$components['user_limit']->value;
+
+            $channelCategory = $interaction->guild->channels->find(function (Channel $channel) use ($category) {
+                if ($channel->type === Channel::TYPE_CATEGORY && strtolower($channel->name) === strtolower($category)) {
+                    return $channel;
+                }
+                return null;
+            });
+
+            $newVc = $interaction->guild->channels->create([
+                'name' => $channelName,
+                'type' => Channel::TYPE_VOICE,
+                'user_limit' => max($userLimit, 1),
+                'parent_id' => $channelCategory?->id
+            ]);
+
+            $interaction->guild->channels->save($newVc)->done(function (Channel $channel) use ($interaction, $lfg, $lfgInteraction) {
+                $newVc = new VoiceChannel([
+                    'guild_id' => $interaction->guild_id,
+                    'vc_discord_id' => $channel->id,
+                    'owner' => $interaction->member->user->id,
+                    'name' => $channel->name,
+                    'user_limit' => $channel->user_limit,
+                    'category' => $channel->parent_id
+                ]);
+
+                if (!is_null($lfg)) {
+                    $lfg->vc()->save($newVc);
+                } else {
+                    $newVc->save();
+                }
+
+                $channel->createInvite([
+                    'max_age' => 0,
+                    'max_uses' => 0,
+                ])->done(function (Invite $invite) use ($interaction, $lfgInteraction) {
+                    $voiceChannelBtnLink = Button::new(Button::STYLE_LINK)
+                        ->setEmoji('🔊')
+                        ->setUrl("https://discord.gg/" . $invite->getRepositoryAttributes()['code']);
+
+                    $embedActionRows = [];
+                    foreach ($lfgInteraction->message->components as $component) {
+                        $embedActionRows[] = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($component->components);
+                    }
+
+                    $vcBtnKeyValueArr = null;
+                    foreach ($embedActionRows as $key => $embedActionRow) {
+                        $filteredComps = array_filter($embedActionRow->getComponents(), function ($v) {
+                            /** @var $v Button */
+                            return $v->getCustomId() === self::VOICE_CHANNEL_BTN;
+                        });
+                        if (!empty($filteredComps)) {
+                            $vcBtnKeyValueArr[$key] = $filteredComps;
+                            break;
+                        }
+                    }
+
+                    $embedActionRowsKey = array_key_first($vcBtnKeyValueArr);
+                    $componentsKey = array_key_first($vcBtnKeyValueArr[$embedActionRowsKey]);
+                    $tempComponents = $embedActionRows[$embedActionRowsKey]->getComponents();
+                    $embedActionRows[$embedActionRowsKey]->clearComponents();
+                    $tempComponents[$componentsKey] = $voiceChannelBtnLink;
+
+                    foreach ($tempComponents as $permComponent) {
+                        $embedActionRows[$embedActionRowsKey]->addComponent($permComponent);
+                    }
+                    $lfgInteraction->message->edit(
+                        MessageBuilder::new()
+                            ->setComponents($embedActionRows)
+                    );
+
+                    $interaction->respondWithMessage(MessageBuilder::new()->setContent('Голосовий канал було успішно створено!'), true);
+                    $interaction->acknowledge();
+                });
+            });
+        };
     }
 
     public static function getLfgFromEmbed(Interaction $interaction): Lfg

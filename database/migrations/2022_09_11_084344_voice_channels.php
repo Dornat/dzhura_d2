@@ -20,6 +20,7 @@ class VoiceChannels extends Migration
             $table->string('owner');
             $table->string('name');
             $table->tinyInteger('user_limit');
+            $table->string('category')->nullable();
             $table->timestamps();
         });
     }

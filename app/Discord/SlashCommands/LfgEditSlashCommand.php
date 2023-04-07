@@ -100,9 +100,11 @@ class LfgEditSlashCommand implements SlashCommandListenerInterface
                     $theEmbed->addField($field);
                 }
 
-                $embedActionRow = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($message->components->first()->components);
-
-                $message->edit(MessageBuilder::new()->addEmbed($theEmbed)->addComponent($embedActionRow));
+                $embedActionRows = [];
+                foreach ($message->components as $component) {
+                    $embedActionRows[] = SlashCommandHelper::constructEmbedActionRowFromComponentRepository($component->components);
+                }
+                $message->edit(MessageBuilder::new()->addEmbed($theEmbed)->setComponents($embedActionRows));
             })->then(function () use ($interaction) {
                 $interaction->respondWithMessage(MessageBuilder::new()->setContent('Редагування пройшло успішно!'), true);
                 $interaction->acknowledge();

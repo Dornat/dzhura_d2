@@ -8,6 +8,7 @@ use App\Discord\SlashCommands\LfgSlashCommandListener;
 use App\Discord\SlashCommands\SettingsSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelCreateSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelDeleteSlashCommand;
+use App\Discord\SlashCommands\VoiceChannelEditSlashCommand;
 use App\Lfg;
 use App\VoiceChannel;
 use Discord\Parts\Channel\Channel;
@@ -16,6 +17,7 @@ use Discord\Discord;
 use Discord\Exceptions\IntentException;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Parts\User\Activity;
+use Discord\Parts\WebSockets\VoiceStateUpdate;
 use Discord\WebSockets\Event;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
@@ -106,6 +108,7 @@ class Run extends Command
             LfgDeleteSlashCommandListener::act($interaction, $discord);
             LfgEditSlashCommand::act($interaction, $discord);
             VoiceChannelCreateSlashCommand::act($interaction, $discord);
+            VoiceChannelEditSlashCommand::act($interaction, $discord);
             VoiceChannelDeleteSlashCommand::act($interaction, $discord);
         });
 
