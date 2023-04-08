@@ -3,6 +3,7 @@
 namespace App\Discord\SlashCommands;
 
 use App\Lfg;
+use App\VoiceChannel;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\InteractionType;
@@ -12,6 +13,9 @@ class LfgDeleteSlashCommandListener implements SlashCommandListenerInterface
 {
     public const LFG_DELETE = 'lfgdelete';
 
+    /**
+     * @throws \Exception
+     */
     public static function act(Interaction $interaction, Discord $discord): void
     {
         if (!($interaction->type === InteractionType::APPLICATION_COMMAND && $interaction->data->name === self::LFG_DELETE)) {
@@ -34,6 +38,11 @@ class LfgDeleteSlashCommandListener implements SlashCommandListenerInterface
 
         if ($lfg->owner === $userId || $interaction->member->permissions->administrator) {
             $interaction->channel->deleteMessages([$lfg->discord_id]);
+            /** @var VoiceChannel $vc */
+            $vc = $lfg->vc()->get()->first();
+            if (!empty($vc)) {
+                $interaction->guild->channels->delete($vc->vc_discord_id);
+            }
             $lfg->delete();
             $interaction->respondWithMessage(MessageBuilder::new()->setContent("Я успішно видалив групу під ідентифікатором: $groupId."), true);
         } else {

@@ -81,6 +81,11 @@ class Run extends Command
         $discord->on(Event::MESSAGE_DELETE, function ($message, Discord $discord) {
             $lfg = Lfg::where('discord_id', $message->id)->first();
             if (!empty($lfg)) {
+                /** @var VoiceChannel $vc */
+                $vc = $lfg->vc()->get()->first();
+                if (!empty($vc)) {
+                    $discord->guilds->get('id', $message->guild_id)->channels->delete($vc->vc_discord_id);
+                }
                 $lfg->delete();
             }
         });
