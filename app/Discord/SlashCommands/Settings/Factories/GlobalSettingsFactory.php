@@ -2,8 +2,7 @@
 
 namespace App\Discord\SlashCommands\Settings\Factories;
 
-use App\Discord\SlashCommands\Settings\SettingsDefaultObject;
-use App\Discord\SlashCommands\Settings\SettingsObject;
+use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Setting;
 use Discord\Builders\Components\ActionRow;
 use Discord\Builders\Components\Button;

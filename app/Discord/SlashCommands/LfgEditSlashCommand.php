@@ -3,7 +3,7 @@
 namespace App\Discord\SlashCommands;
 
 use App\Discord\Helpers\SlashCommandHelper;
-use App\Discord\SlashCommands\Settings\SettingsObject;
+use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Lfg;
 use Discord\Builders\Components\ActionRow;
 use Discord\Builders\MessageBuilder;

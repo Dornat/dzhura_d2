@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discord\SlashCommands\Settings;
+namespace App\Discord\SlashCommands\Settings\Objects;
 
 use App\Setting;
 use Discord\Parts\Interactions\Interaction;
@@ -9,12 +9,13 @@ class SettingsObject implements SettingsObjectInterface
 {
     public VCObject $vc;
     public GlobalSettingsObject $global;
+    public LevelsObject $levels;
 
-    public function __construct(string $json)
+    public function __construct(array $json)
     {
-        $data = json_decode($json, true);
-        $this->global = new GlobalSettingsObject(json_encode($data['global']));
-        $this->vc = new VCObject(json_encode($data['vc']));
+        $this->global = new GlobalSettingsObject($json['global'] ?? []);
+        $this->vc = new VCObject($json['vc'] ?? []);
+        $this->levels = new LevelsObject($json['levels'] ?? []);
     }
 
     public function jsonSerialize(): array
@@ -22,6 +23,7 @@ class SettingsObject implements SettingsObjectInterface
         $result = [];
         $result['global'] = $this->global;
         $result['vc'] = $this->vc;
+        $result['levels'] = $this->levels;
         return $result;
     }
 
@@ -30,7 +32,7 @@ class SettingsObject implements SettingsObjectInterface
         $settingRow = Setting::where('guild_id', $guildId)->first();
 
         if (!is_null($settingRow)) {
-            return new self($settingRow->object);
+            return new self(json_decode($settingRow->object, true));
         }
 
         return null;
@@ -41,7 +43,7 @@ class SettingsObject implements SettingsObjectInterface
         $settingsModel = Setting::where('guild_id', $interaction->guild_id)->first();
 
         if (!is_null($settingsModel)) {
-            $settingsObject = new SettingsObject($settingsModel->object);
+            $settingsObject = new SettingsObject(json_decode($settingsModel->object, true));
         } else {
             $settingsObject = SettingsDefaultObject::get();
             $settingsModel = new Setting();

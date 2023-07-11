@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Discord\SlashCommands\Settings;
+namespace App\Discord\SlashCommands\Settings\Objects;
 
 class VCObject implements SettingsObjectInterface
 {
@@ -8,12 +8,11 @@ class VCObject implements SettingsObjectInterface
     public string $defaultCategory;
     public int $channelLimit;
 
-    public function __construct(string $json)
+    public function __construct(array $json)
     {
-        $data = json_decode($json, true);
-        $this->permittedRoles = $data['permittedRoles'] ?? [];
-        $this->defaultCategory = $data['defaultCategory'] ?? 'База Азова';
-        $this->channelLimit = $data['channelLimit'] ?? 1;
+        $this->permittedRoles = $json['permittedRoles'] ?? [];
+        $this->defaultCategory = $json['defaultCategory'] ?? 'База Азова';
+        $this->channelLimit = $json['channelLimit'] ?? 1;
     }
 
     public function jsonSerialize(): array
