@@ -63,6 +63,14 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
             LevelsSettingsFactory::actOnRoleRewardsLevelRoleSelect($interaction, $discord);
         } else if ($interaction->data->custom_id === LevelsSettingsFactory::ROLE_REWARDS_BTN_CLEAR) {
             LevelsSettingsFactory::actOnRoleRewardsBtnClear($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_SELECT) {
+            LevelsSettingsFactory::actOnXPRateSelect($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_ROLE_SELECT) {
+            LevelsSettingsFactory::actOnXPRateRoleSelect($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_ROLE_RATE_SELECT) {
+            LevelsSettingsFactory::actOnXPRateRoleRateSelect($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_ROLE_RATE_BTN_CLEAR) {
+            LevelsSettingsFactory::actOnXPRateRoleRateBtnClear($interaction, $discord);
         }
     }
 
@@ -138,6 +146,8 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
             LevelsSettingsFactory::actOnLevelUpAnnouncementCommand($interaction, $discord, $settingsObject);
         } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::ROLE_REWARDS) {
             LevelsSettingsFactory::actOnRoleRewardsCommand($interaction, $discord, $settingsObject);
+        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::XP_RATE) {
+            LevelsSettingsFactory::actOnXPRateCommand($interaction, $discord, $settingsObject);
         }
     }
 }

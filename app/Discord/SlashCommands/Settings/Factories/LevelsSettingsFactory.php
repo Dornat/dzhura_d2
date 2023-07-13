@@ -6,6 +6,7 @@ use App\Discord\Helpers\SlashCommandHelper;
 use App\Discord\SlashCommands\Settings\Objects\Levels\AnnouncementChannelEnum;
 use App\Discord\SlashCommands\Settings\Objects\Levels\CustomChannelObject;
 use App\Discord\SlashCommands\Settings\Objects\Levels\RoleRewardsTypeEnum;
+use App\Discord\SlashCommands\Settings\Objects\Levels\XPRateEnum;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Discord\SlashCommands\Settings\SelectMenuChannels;
 use App\Discord\SlashCommands\Settings\SelectMenuRoles;
@@ -28,6 +29,7 @@ class LevelsSettingsFactory
     public const ACTIVATE = 'activate';
     public const LEVEL_UP_ANNOUNCEMENT = 'level-up-announcement';
     public const ROLE_REWARDS = 'role-rewards';
+    public const XP_RATE = 'xp-rate';
 
     public const ACTIVATE_SELECT = 'activate_select';
     public const ANNOUNCEMENT_CHANNEL_SELECT = 'announcement_channel_select';
@@ -40,6 +42,10 @@ class LevelsSettingsFactory
     public const ROLE_REWARDS_LEVEL_NUMBER_SELECT = 'role_rewards_level_number_select';
     public const ROLE_REWARDS_LEVEL_ROLE_SELECT = 'role_rewards_level_role_select';
     public const ROLE_REWARDS_BTN_CLEAR = 'role_rewards_btn_clear';
+    public const XP_RATE_SELECT = 'xp_rate_select';
+    public const XP_RATE_ROLE_SELECT = 'xp_rate_role_select';
+    public const XP_RATE_ROLE_RATE_SELECT = 'xp_rate_role_rate_select';
+    public const XP_RATE_ROLE_RATE_BTN_CLEAR = 'xp_rate_role_rate_btn_clear';
 
     public static function actOnActivateCommand(Interaction $interaction, Discord $discord, SettingsObject $settingsObject): void
     {
@@ -472,6 +478,185 @@ class LevelsSettingsFactory
         $newEmbed->addFieldValues('Тип додавання ролей', $settingsObject->levels->roleRewards->roleRewardsType->label());
         $newEmbed->addFieldValues('Прибирати ролі при зменшенні рівня (внаслідок команди /levels remove-xp)', $settingsObject->levels->roleRewards->removeRoleRewardsOnDemotion ? 'Так' : 'Ні');
         $newEmbed->addFieldValues('Рівневі винагороди', $settingsObject->levels->roleRewards->roleRewardsToString());
+
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+    }
+
+    public static function actOnXPRateCommand(Interaction $interaction, Discord $discord, SettingsObject $settingsObject): void
+    {
+        $embed = new Embed($discord);
+        $embed->setColor('#024ad9');
+        $embed->setTitle('Налаштування швидкості отримання XP (досвіду)');
+        $embed->addFieldValues('Рейт', '**'. $settingsObject->levels->xpRate->rate->label() . '**');
+        $embed->addFieldValues('Окремі рейти для конкретних ролей', $settingsObject->levels->xpRate->roleSpecificRateToString());
+
+        $components = [];
+
+        $xpRateSelect = SelectMenu::new(self::XP_RATE_SELECT)->setPlaceholder('Рейт');
+        foreach (XPRateEnum::cases() as $enum) {
+            $xpRateSelect->addOption(new Option($enum->label(), $enum->value));
+        }
+
+        $components[] = $xpRateSelect;
+
+        $components[] = SelectMenuRoles::new(self::XP_RATE_ROLE_SELECT)
+            ->setPlaceholder('Роль')
+            ->setMinValues(0)
+            ->setMaxValues(1);
+
+        $xpRateRoleRateSelect = SelectMenu::new(self::XP_RATE_ROLE_RATE_SELECT)->setPlaceholder('Рольовий Рейт');
+        foreach (XPRateEnum::cases() as $enum) {
+            $xpRateRoleRateSelect->addOption(new Option($enum->label(), $enum->value));
+        }
+
+        $components[] = $xpRateRoleRateSelect;
+
+        $btnActionRow = ActionRow::new();
+        $btnActionRow->addComponent(Button::new(Button::STYLE_DANGER, self::XP_RATE_ROLE_RATE_BTN_CLEAR)->setLabel('Очистити всі рольові рейти'));
+
+        $components[] = $btnActionRow;
+
+        $msg = MessageBuilder::new()
+            ->setContent("> 📖 Тут можна налаштувати коефіцієнт отримання досвіду. Тобто швидкість, з якою користувач буде отримувати досвід. Також можна налаштувати окремо коефіцієнт для якоїсь конкретної ролі.\n> \n> Перший селектор \"Роль\" відповідає за загальний рейт отримання досвіду, два інші за налаштування коефіцієнтів для конкретної ролі. Процес налаштування коефіцієнту для конкретної ролі: обрати потрібну роль в селекторi \"Роль\", потім в селекторі \"Рольовий Рейт\" обрати потрібний рейт. Якщо потрібно змінити налаштування для конкретної ролі, то це можна зробити повторивши процедуру як при додаванні. Але якщо потрібно видалити, то доведеться натиснути кнопку \"Очистити всі рольові рейти\", щоби видалити всі налаштування, і після цього доведеться повторити процедуру налаштування спочатку.\n> \n> ⚙")
+            ->setEmbeds([$embed])
+            ->setComponents($components);
+
+        $interaction->respondWithMessage($msg, true);
+    }
+
+    public static function actOnXPRateSelect(Interaction $interaction, Discord $discord): void
+    {
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->xpRate->rate = XPRateEnum::tryFrom($interaction->data->values[0]);
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Рейт', '**'. $settingsObject->levels->xpRate->rate->label() . '**');
+        $newEmbed->addFieldValues('Окремі рейти для конкретних ролей', $settingsObject->levels->xpRate->roleSpecificRateToString());
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+
+        $interaction->acknowledge();
+    }
+
+    public static function actOnXPRateRoleSelect(Interaction $interaction, Discord $discord): void
+    {
+        /** @var Embed $newEmbed */
+        $newEmbed = $interaction->message->embeds->first();
+
+        $footerText = $newEmbed->footer?->text;
+        $role = $interaction->data?->values[0] ?? null;
+
+        if (empty($footerText)) {
+            if (empty($role)) {
+                $interaction->acknowledge();
+                return;
+            }
+        }
+
+        if (!empty($footerText)) {
+            $newEmbed->setFooter('');
+        } else {
+            $newEmbed->setFooter($role);
+        }
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+    }
+
+    public static function actOnXPRateRoleRateSelect(Interaction $interaction, Discord $discord): void
+    {
+        /** @var Embed $newEmbed */
+        $newEmbed = $interaction->message->embeds->first();
+
+        $role = $newEmbed->footer?->text;
+        $xpRoleRate = $interaction->data?->values[0] ?? null;
+
+        if (empty($role)) {
+            if (empty($xpRoleRate)) {
+                $interaction->acknowledge();
+                return;
+            }
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Спершу обери роль.'), true);
+            return;
+        }
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+        $newEmbed->setFooter('');
+
+        if (empty($xpRoleRate)) {
+            $interaction->updateMessage(
+                MessageBuilder::new()
+                    ->setContent($interaction->message->content)
+                    ->addEmbed($newEmbed)
+                    ->setComponents($components)
+            );
+            return;
+        }
+
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->xpRate->roleSpecificRate[$role] = $xpRoleRate;
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Рейт', '**'. $settingsObject->levels->xpRate->rate->label() . '**');
+        $newEmbed->addFieldValues('Окремі рейти для конкретних ролей', $settingsObject->levels->xpRate->roleSpecificRateToString());
+
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+    }
+
+    public static function actOnXPRateRoleRateBtnClear(Interaction $interaction, Discord $discord): void
+    {
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+        /** @var Embed $newEmbed */
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->setFooter('');
+
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->xpRate->roleSpecificRate = [];
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Рейт', '**'. $settingsObject->levels->xpRate->rate->label() . '**');
+        $newEmbed->addFieldValues('Окремі рейти для конкретних ролей', $settingsObject->levels->xpRate->roleSpecificRateToString());
 
         $interaction->updateMessage(
             MessageBuilder::new()

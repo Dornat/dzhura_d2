@@ -15,7 +15,7 @@ class XPRateObject implements SettingsObjectInterface
 
     public function __construct(array $json)
     {
-        $this->rate = XPRateEnum::tryFrom($json['rate'] ?? XPRateEnum::X1->value);
+        $this->rate = XPRateEnum::tryFrom($json['rate'] ?? XPRateEnum::X100->value);
         $this->roleSpecificRate = $json['roleSpecificRate'] ?? [];
     }
 
@@ -23,7 +23,16 @@ class XPRateObject implements SettingsObjectInterface
     {
         $result = [];
         $result['rate'] = $this->rate->value;
-        $result['roleSpecificXPRate'] = $this->roleSpecificRate;
+        $result['roleSpecificRate'] = $this->roleSpecificRate;
+        return $result;
+    }
+
+    public function roleSpecificRateToString(): string
+    {
+        $result = '';
+        foreach ($this->roleSpecificRate as $role => $rate) {
+            $result .= "<@&$role> ➡ **" . XPRateEnum::tryFrom((int)$rate)->label() . "** \n";
+        }
         return $result;
     }
 }
