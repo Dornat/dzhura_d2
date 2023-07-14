@@ -23,6 +23,27 @@ class NoXPRolesObject implements SettingsObjectInterface
         $this->except = $json['except'] ?? [];
     }
 
+    public function conditionLabel(): string
+    {
+        if ($this->allowAllRoles) {
+            return 'Дозволити всім ролям отримувати XP (досвід)';
+        }
+        return 'Заборонити всім ролям отримувати XP (досвід)';
+    }
+
+    public function exceptLabel(): string
+    {
+        return implode(
+            ', ',
+            array_map(
+                function ($role) {
+                    return "<@&$role>";
+                },
+                $this->except
+            )
+        );
+    }
+
     public function jsonSerialize(): array
     {
         $result = [];

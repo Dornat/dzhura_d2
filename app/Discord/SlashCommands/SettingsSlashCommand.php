@@ -71,6 +71,12 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
             LevelsSettingsFactory::actOnXPRateRoleRateSelect($interaction, $discord);
         } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_ROLE_RATE_BTN_CLEAR) {
             LevelsSettingsFactory::actOnXPRateRoleRateBtnClear($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_ROLES_CONDITION_SELECT) {
+            LevelsSettingsFactory::actOnNoXPRolesConditionSelect($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_ROLES_LIST_SELECT) {
+            LevelsSettingsFactory::actOnNoXPRolesListSelect($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_ROLES_LIST_BTN_CLEAR) {
+            LevelsSettingsFactory::actOnNoXPRolesListBtnClear($interaction, $discord);
         }
     }
 
@@ -148,6 +154,8 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
             LevelsSettingsFactory::actOnRoleRewardsCommand($interaction, $discord, $settingsObject);
         } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::XP_RATE) {
             LevelsSettingsFactory::actOnXPRateCommand($interaction, $discord, $settingsObject);
+        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::NO_XP_ROLES) {
+            LevelsSettingsFactory::actOnNoXPRolesCommand($interaction, $discord, $settingsObject);
         }
     }
 }

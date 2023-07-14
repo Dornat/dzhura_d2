@@ -22,7 +22,6 @@ use Discord\Helpers\Collection;
 use Discord\Parts\Embed\Embed;
 use Discord\Parts\Embed\Field;
 use Discord\Parts\Interactions\Interaction;
-use Discord\WebSockets\Op;
 
 class LevelsSettingsFactory
 {
@@ -30,6 +29,7 @@ class LevelsSettingsFactory
     public const LEVEL_UP_ANNOUNCEMENT = 'level-up-announcement';
     public const ROLE_REWARDS = 'role-rewards';
     public const XP_RATE = 'xp-rate';
+    public const NO_XP_ROLES = 'no-xp-roles';
 
     public const ACTIVATE_SELECT = 'activate_select';
     public const ANNOUNCEMENT_CHANNEL_SELECT = 'announcement_channel_select';
@@ -46,6 +46,9 @@ class LevelsSettingsFactory
     public const XP_RATE_ROLE_SELECT = 'xp_rate_role_select';
     public const XP_RATE_ROLE_RATE_SELECT = 'xp_rate_role_rate_select';
     public const XP_RATE_ROLE_RATE_BTN_CLEAR = 'xp_rate_role_rate_btn_clear';
+    public const NO_XP_ROLES_CONDITION_SELECT = 'no_xp_roles_condition_select';
+    public const NO_XP_ROLES_LIST_SELECT = 'no_xp_roles_list_select';
+    public const NO_XP_ROLES_LIST_BTN_CLEAR = 'no_xp_roles_list_btn_clear';
 
     public static function actOnActivateCommand(Interaction $interaction, Discord $discord, SettingsObject $settingsObject): void
     {
@@ -658,6 +661,117 @@ class LevelsSettingsFactory
         $newEmbed->addFieldValues('Рейт', '**'. $settingsObject->levels->xpRate->rate->label() . '**');
         $newEmbed->addFieldValues('Окремі рейти для конкретних ролей', $settingsObject->levels->xpRate->roleSpecificRateToString());
 
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+    }
+
+    public static function actOnNoXPRolesCommand(Interaction $interaction, Discord $discord, SettingsObject $settingsObject): void
+    {
+        $embed = new Embed($discord);
+        $embed->setColor('#024ad9');
+        $embed->setTitle('Налаштування ролей, які будуть отримувати чи не отримувати XP (досвід)');
+        $embed->addFieldValues('Умова', $settingsObject->levels->noXPRoles->conditionLabel());
+        $embed->addFieldValues('Окрім ролей', $settingsObject->levels->noXPRoles->exceptLabel());
+
+        $components[] = SelectMenu::new(self::NO_XP_ROLES_CONDITION_SELECT)
+            ->setPlaceholder('Умова')
+            ->addOption(new Option('Дозволити всім ролям отримувати XP (досвід)', true))
+            ->addOption(new Option('Заборонити всім ролям отримувати XP (досвід)', false));
+
+        $components[] = SelectMenuRoles::new(self::NO_XP_ROLES_LIST_SELECT)
+            ->setPlaceholder('Окрім ролей')
+            ->setMinValues(0)
+            ->setMaxValues(25);
+
+        $components[] = ActionRow::new()
+            ->addComponent(
+                Button::new(Button::STYLE_DANGER, self::NO_XP_ROLES_LIST_BTN_CLEAR)
+                    ->setLabel('Очистити всі ролі')
+            );
+
+        $msg = MessageBuilder::new()
+            ->setContent("> 📖 Тут можна зробити так, щоби роль чи ролі не отримували досвід взагалі, тобто користувачі з відповідними ролями не будуть отримувати досвід. Може бути корисно в деяких випадках.\n> \n> ❗ Якщо буде обрано умову на заборону отримувати досвід для всіх ролей і жодної ролі не буде обрано, то в такому випадку ніхто на сервері не матиме змогу отримувати досвід. \n> \n> ⚙")
+            ->setEmbeds([$embed])
+            ->setComponents($components);
+
+        $interaction->respondWithMessage($msg, true);
+    }
+
+    public static function actOnNoXPRolesConditionSelect(Interaction $interaction, Discord $discord): void
+    {
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->noXPRoles->allowAllRoles = (bool)$interaction->data->values[0];
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Умова', $settingsObject->levels->noXPRoles->conditionLabel());
+        $newEmbed->addFieldValues('Окрім ролей', $settingsObject->levels->noXPRoles->exceptLabel());
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+
+        $interaction->acknowledge();
+    }
+
+    public static function actOnNoXPRolesListSelect(Interaction $interaction, Discord $discord): void
+    {
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->noXPRoles->except = $interaction->data->values;
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Умова', $settingsObject->levels->noXPRoles->conditionLabel());
+        $newEmbed->addFieldValues('Окрім ролей', $settingsObject->levels->noXPRoles->exceptLabel());
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+    }
+
+    public static function actOnNoXPRolesListBtnClear(Interaction $interaction, Discord $discord): void
+    {
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->noXPRoles->except = [];
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        /** @var Embed $newEmbed */
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Умова', $settingsObject->levels->noXPRoles->conditionLabel());
+        $newEmbed->addFieldValues('Окрім ролей', $settingsObject->levels->noXPRoles->exceptLabel());
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
         $interaction->updateMessage(
             MessageBuilder::new()
                 ->setContent($interaction->message->content)
