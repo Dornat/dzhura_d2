@@ -23,6 +23,27 @@ class NoXPChannelsObject implements SettingsObjectInterface
         $this->except = $json['except'] ?? [];
     }
 
+    public function conditionLabel(): string
+    {
+        if ($this->allowAllChannels) {
+            return 'Дозволити в усіх каналах отримувати XP (досвід)';
+        }
+        return 'Заборонити в усіх каналах отримувати XP (досвід)';
+    }
+
+    public function exceptLabel(): string
+    {
+        return implode(
+            ', ',
+            array_map(
+                function ($channel) {
+                    return "<#$channel>";
+                },
+                $this->except
+            )
+        );
+    }
+
     public function jsonSerialize(): array
     {
         $result = [];

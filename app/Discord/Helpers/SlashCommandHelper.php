@@ -63,8 +63,8 @@ class SlashCommandHelper
                         $result[] = SelectMenuChannels::new($component->custom_id)
                             ->setChannelTypes([SelectMenuChannels::GUILD_TEXT_CHANNEL_TYPE])
                             ->setPlaceholder($component->placeholder)
-                            ->setMinValues(0)
-                            ->setMaxValues(1);
+                            ->setMinValues($component->min_values)
+                            ->setMaxValues($component->max_values);
                         break;
                     case SelectMenuRoles::TYPE_SELECT_MENU_ROLES:
                         $result[] = SelectMenuRoles::new($component->custom_id)

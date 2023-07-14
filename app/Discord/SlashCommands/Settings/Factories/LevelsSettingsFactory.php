@@ -30,6 +30,7 @@ class LevelsSettingsFactory
     public const ROLE_REWARDS = 'role-rewards';
     public const XP_RATE = 'xp-rate';
     public const NO_XP_ROLES = 'no-xp-roles';
+    public const NO_XP_CHANNELS = 'no-xp-channels';
 
     public const ACTIVATE_SELECT = 'activate_select';
     public const ANNOUNCEMENT_CHANNEL_SELECT = 'announcement_channel_select';
@@ -49,6 +50,9 @@ class LevelsSettingsFactory
     public const NO_XP_ROLES_CONDITION_SELECT = 'no_xp_roles_condition_select';
     public const NO_XP_ROLES_LIST_SELECT = 'no_xp_roles_list_select';
     public const NO_XP_ROLES_LIST_BTN_CLEAR = 'no_xp_roles_list_btn_clear';
+    public const NO_XP_CHANNELS_CONDITION_SELECT = 'no_xp_channels_condition_select';
+    public const NO_XP_CHANNELS_LIST_SELECT = 'no_xp_channels_list_select';
+    public const NO_XP_CHANNELS_LIST_BTN_CLEAR = 'no_xp_channels_list_btn_clear';
 
     public static function actOnActivateCommand(Interaction $interaction, Discord $discord, SettingsObject $settingsObject): void
     {
@@ -770,6 +774,118 @@ class LevelsSettingsFactory
         $newEmbed->offsetUnset('fields');
         $newEmbed->addFieldValues('Умова', $settingsObject->levels->noXPRoles->conditionLabel());
         $newEmbed->addFieldValues('Окрім ролей', $settingsObject->levels->noXPRoles->exceptLabel());
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+    }
+
+    public static function actOnNoXPChannelsCommand(Interaction $interaction, Discord $discord, SettingsObject $settingsObject): void
+    {
+        $embed = new Embed($discord);
+        $embed->setColor('#024ad9');
+        $embed->setTitle('Налаштування каналів, у яких можна буде отримувати XP (досвід)');
+        $embed->addFieldValues('Умова', $settingsObject->levels->noXPChannels->conditionLabel());
+        $embed->addFieldValues('Окрім каналів', $settingsObject->levels->noXPChannels->exceptLabel());
+
+        $components[] = SelectMenu::new(self::NO_XP_CHANNELS_CONDITION_SELECT)
+            ->setPlaceholder('Умова')
+            ->addOption(new Option('Дозволити в усіх каналах отримувати XP (досвід)', true))
+            ->addOption(new Option('Заборонити в усіх каналах отримувати XP (досвід)', false));
+
+        $components[] = SelectMenuChannels::new(self::NO_XP_CHANNELS_LIST_SELECT)
+            ->setChannelTypes([SelectMenuChannels::GUILD_TEXT_CHANNEL_TYPE])
+            ->setPlaceholder('Окрім каналів')
+            ->setMinValues(0)
+            ->setMaxValues(25);
+
+        $components[] = ActionRow::new()
+            ->addComponent(
+                Button::new(Button::STYLE_DANGER, self::NO_XP_CHANNELS_LIST_BTN_CLEAR)
+                    ->setLabel('Очистити всі канали')
+            );
+
+        $msg = MessageBuilder::new()
+            ->setContent("> 📖 Тут можна налаштувати канали, пишучи в яких користувачі не будуть отримувати XP (досвід).\n> \n> ❗ Якщо буде обрано умову на заборону отримувати досвід для всіх каналів і жоден канал не буде обрано, то в такому випадку ніхто на сервері не матиме змогу отримувати досвід в жодному з каналів. \n> \n> ⚙")
+            ->setEmbeds([$embed])
+            ->setComponents($components);
+
+        $interaction->respondWithMessage($msg, true);
+    }
+
+    public static function actOnNoXPChannelsConditionSelect(Interaction $interaction, Discord $discord): void
+    {
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->noXPChannels->allowAllChannels = (bool)$interaction->data->values[0];
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Умова', $settingsObject->levels->noXPChannels->conditionLabel());
+        $newEmbed->addFieldValues('Окрім каналів', $settingsObject->levels->noXPChannels->exceptLabel());
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+
+        $interaction->acknowledge();
+    }
+
+    public static function actOnNoXPChannelsListSelect(Interaction $interaction, Discord $discord): void
+    {
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->noXPChannels->except = $interaction->data->values;
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Умова', $settingsObject->levels->noXPChannels->conditionLabel());
+        $newEmbed->addFieldValues('Окрім каналів', $settingsObject->levels->noXPChannels->exceptLabel());
+
+        $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents($components)
+        );
+    }
+
+    public static function actOnNoXPChannelsListBtnClear(Interaction $interaction, Discord $discord): void
+    {
+        /** @var SettingsObject $settingsObject */
+        list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
+        $settingsObject->levels->noXPChannels->except = [];
+
+        /** @var Setting $settingsModel object */
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        /** @var Embed $newEmbed */
+        $newEmbed = $interaction->message->embeds->first();
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addFieldValues('Умова', $settingsObject->levels->noXPChannels->conditionLabel());
+        $newEmbed->addFieldValues('Окрім каналів', $settingsObject->levels->noXPChannels->exceptLabel());
 
         $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
         $interaction->updateMessage(

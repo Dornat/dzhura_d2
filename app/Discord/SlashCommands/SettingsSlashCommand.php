@@ -77,6 +77,12 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
             LevelsSettingsFactory::actOnNoXPRolesListSelect($interaction, $discord);
         } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_ROLES_LIST_BTN_CLEAR) {
             LevelsSettingsFactory::actOnNoXPRolesListBtnClear($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_CHANNELS_CONDITION_SELECT) {
+            LevelsSettingsFactory::actOnNoXPChannelsConditionSelect($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_CHANNELS_LIST_SELECT) {
+            LevelsSettingsFactory::actOnNoXPChannelsListSelect($interaction, $discord);
+        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_CHANNELS_LIST_BTN_CLEAR) {
+            LevelsSettingsFactory::actOnNoXPChannelsListBtnClear($interaction, $discord);
         }
     }
 
@@ -156,6 +162,8 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
             LevelsSettingsFactory::actOnXPRateCommand($interaction, $discord, $settingsObject);
         } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::NO_XP_ROLES) {
             LevelsSettingsFactory::actOnNoXPRolesCommand($interaction, $discord, $settingsObject);
+        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::NO_XP_CHANNELS) {
+            LevelsSettingsFactory::actOnNoXPChannelsCommand($interaction, $discord, $settingsObject);
         }
     }
 }
