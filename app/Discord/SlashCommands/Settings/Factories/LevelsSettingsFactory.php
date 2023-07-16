@@ -119,7 +119,7 @@ class LevelsSettingsFactory
             ->addOption(new Option(AnnouncementChannelEnum::CUSTOM_CHANNEL->label(), AnnouncementChannelEnum::CUSTOM_CHANNEL->value));
 
         if ($settingsObject->levels->levelUpAnnouncement->channel === AnnouncementChannelEnum::CUSTOM_CHANNEL) {
-            $embed->addFieldValues('Канал на сервері', isset($settingsObject->levels->levelUpAnnouncement->customChannel) ? '#' . $settingsObject->levels->levelUpAnnouncement->customChannel->name : 'Не обрано');
+            $embed->addFieldValues('Канал на сервері', isset($settingsObject->levels->levelUpAnnouncement->customChannel) ? '<#' . $settingsObject->levels->levelUpAnnouncement->customChannel->id . '>' : 'Не обрано');
 
             $components[] = SelectMenuChannels::new(self::CUSTOM_CHANNEL_SELECT)
                 ->setChannelTypes([SelectMenuChannels::GUILD_TEXT_CHANNEL_TYPE])
@@ -165,7 +165,7 @@ class LevelsSettingsFactory
         $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);
 
         if ($settingsObject->levels->levelUpAnnouncement->channel === AnnouncementChannelEnum::CUSTOM_CHANNEL) {
-            $newEmbed->addFieldValues('Канал на сервері', isset($settingsObject->levels->levelUpAnnouncement->customChannel) ? '#' . $settingsObject->levels->levelUpAnnouncement->customChannel->name : 'Не обрано');
+            $newEmbed->addFieldValues('Канал на сервері', isset($settingsObject->levels->levelUpAnnouncement->customChannel) ? '<#' . $settingsObject->levels->levelUpAnnouncement->customChannel->id . '>' : 'Не обрано');
             array_splice(
                 $components,
                 1,
@@ -218,7 +218,7 @@ class LevelsSettingsFactory
         $newEmbed = $interaction->message->embeds->first();
         $newEmbed->offsetUnset('fields');
         $newEmbed->addFieldValues('Канал, куди йтимуть оголошення', $settingsObject->levels->levelUpAnnouncement->channel->label());
-        $newEmbed->addFieldValues('Канал на сервері', is_null($settingsObject->levels->levelUpAnnouncement->customChannel) ? '' : '#' . $settingsObject->levels->levelUpAnnouncement->customChannel->name);
+        $newEmbed->addFieldValues('Канал на сервері', is_null($settingsObject->levels->levelUpAnnouncement->customChannel) ? '' : '<#' . $settingsObject->levels->levelUpAnnouncement->customChannel->name . '>');
         $newEmbed->addFieldValues('Повідомлення', self::wrapVariablesIntoBackticks($settingsObject->levels->levelUpAnnouncement->announcementMessage));
 
         $components = SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction);

@@ -2,6 +2,7 @@
 
 namespace App\Commands;
 
+use App\Discord\SlashCommands\Levels\LevelingSystem;
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
 use App\Discord\SlashCommands\LfgEditSlashCommand;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
@@ -12,6 +13,7 @@ use App\Discord\SlashCommands\VoiceChannelEditSlashCommand;
 use App\Lfg;
 use App\VoiceChannel;
 use Discord\Parts\Channel\Channel;
+use Discord\Parts\Channel\Message;
 use Discord\Parts\Interactions\Command\Command as DiscordCommand;
 use Discord\Discord;
 use Discord\Exceptions\IntentException;
@@ -76,6 +78,10 @@ class Run extends Command
 //
 //            $socket = new SocketServer('127.0.0.1:8080');
 //            $http->listen($socket);
+        });
+
+        $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) {
+            LevelingSystem::act($message, $discord);
         });
 
         $discord->on(Event::MESSAGE_DELETE, function ($message, Discord $discord) {
