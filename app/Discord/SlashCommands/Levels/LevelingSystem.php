@@ -13,6 +13,9 @@ use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Http\Exceptions\NoPermissionsException;
 use Discord\Parts\Channel\Message;
+use Discord\Parts\User\Member;
+use Exception;
+use Illuminate\Support\Facades\Log;
 
 class LevelingSystem
 {
@@ -93,11 +96,11 @@ class LevelingSystem
         $levelModel->xp_current += $xpRewarded;
 
         if ($levelModel->xp_current >= LevelingXPRewards::neededToLevelUp()[$levelModel->level]) {
-            $levelModel->xp_current = 0;
+            $levelModel->xp_current -= LevelingXPRewards::neededToLevelUp()[$levelModel->level];
             $levelModel->level += 1;
             $levelModel->save();
             self::levelUpAnnouncement($message, $discord, $settingsObject, $levelModel->level);
-            self::roleRewards($message, $settingsObject, $levelModel->level);
+            self::roleRewards($message->member, $discord, $settingsObject, $levelModel->level);
         } else {
             $levelModel->save();
         }
@@ -138,34 +141,54 @@ class LevelingSystem
             $channel = $discord->getChannel($settingsObject->levels->levelUpAnnouncement->customChannel->id);
             try {
                 $channel->sendMessage(
-                    MessageBuilder::new()
-                        ->setContent($messageAnnouncement)
-                );
+                    MessageBuilder::new()->setContent($messageAnnouncement)
+                )->then(function () {
+                }, function () use ($message, $messageAnnouncement, $settingsObject) {
+                    $message->reply(MessageBuilder::new()->setContent($messageAnnouncement . "\n\n ❗ Я бачу, що на сервері налаштовано відправку цього повідомлення в <#" . $settingsObject->levels->levelUpAnnouncement->customChannel->id . ">, але я не маю дозволу на відправку повідомлень в цей канал."));
+                });
             } catch (NoPermissionsException $e) {
                 $message->reply(MessageBuilder::new()->setContent($messageAnnouncement . "\n\n ❗ Я бачу, що на сервері налаштовано відправку цього повідомлення в <#" . $settingsObject->levels->levelUpAnnouncement->customChannel->id . ">, але я не маю дозволу на відправку повідомлень в цей канал."));
             }
         }
     }
 
-    private static function roleRewards(Message $message, SettingsObject $settingsObject, int $level): void
+    public static function roleRewards(Member $member, Discord $discord, SettingsObject $settingsObject, int $level): void
     {
-        if (empty($settingsObject->levels->roleRewards->roleRewards) || !isset($settingsObject->levels->roleRewards->roleRewards[$level])) {
+        if (empty($settingsObject->levels->roleRewards->roleRewards)) {
             return;
         }
 
-        $message->member->addRole($settingsObject->levels->roleRewards->roleRewards[$level]);
+        $allMemberRoles = array_map('strval', array_keys($member->roles->toArray()));
+        $roleRewards = $settingsObject->levels->roleRewards->roleRewards;
+        krsort($roleRewards);
 
-        if ($settingsObject->levels->roleRewards->roleRewardsType === RoleRewardsTypeEnum::REMOVE_PREVIOUS_REWARDS) {
-            $rolesToRemove = [];
-            $roleRewards = $settingsObject->levels->roleRewards->roleRewards;
-            ksort($roleRewards);
-            foreach ($roleRewards as $lvl => $role) {
-                if ($lvl < $level) {
-                    $rolesToRemove[] = $role;
+        $topMostRole = true;
+        foreach ($roleRewards as $lvl => $role) {
+            if ($lvl <= $level) {
+                if (in_array($role, $allMemberRoles) && !$topMostRole) {
+                    if ($settingsObject->levels->roleRewards->roleRewardsType === RoleRewardsTypeEnum::REMOVE_PREVIOUS_REWARDS) {
+                        unset($allMemberRoles[array_search($role, $allMemberRoles)]);
+                        try {
+                            $guild = $discord->guilds->get('id', $member->guild_id);
+                            $guild->members->fetch($member->user->id, true)->then(function (Member $member) use ($role, $level) {
+                                $member->removeRole($role, "Level: $level");
+                            });
+                        } catch (Exception $e) {
+                        }
+                    }
+                } else {
+                    if (!in_array($role, $allMemberRoles) && ($topMostRole || $settingsObject->levels->roleRewards->roleRewardsType === RoleRewardsTypeEnum::STACK_PREVIOUS_REWARDS)) {
+                        $allMemberRoles[] = $role;
+                        try {
+                            $guild = $discord->guilds->get('id', $member->guild_id);
+                            $guild->members->fetch($member->user->id, true)->then(function (Member $member) use ($role, $level) {
+                                $member->addRole($role, "Level: $level");
+                            });
+                        } catch (Exception $e) {
+                        }
+                    }
                 }
-            }
-            foreach ($rolesToRemove as $roleToRemove) {
-                $message->member->removeRole($roleToRemove);
+                $topMostRole = false;
             }
         }
     }

@@ -3,6 +3,7 @@
 namespace App\Commands;
 
 use App\Discord\SlashCommands\Levels\LevelingSystem;
+use App\Discord\SlashCommands\LevelsSlashCommand;
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
 use App\Discord\SlashCommands\LfgEditSlashCommand;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
@@ -10,6 +11,7 @@ use App\Discord\SlashCommands\SettingsSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelCreateSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelDeleteSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelEditSlashCommand;
+use App\Discord\SlashCommands\ZavalaSlashCommand;
 use App\Lfg;
 use App\VoiceChannel;
 use Discord\Parts\Channel\Channel;
@@ -19,15 +21,10 @@ use Discord\Discord;
 use Discord\Exceptions\IntentException;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Parts\User\Activity;
-use Discord\Parts\WebSockets\VoiceStateUpdate;
 use Discord\WebSockets\Event;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
 use LaravelZero\Framework\Commands\Command;
-use Psr\Http\Message\ServerRequestInterface;
-use React\Http\HttpServer;
-use React\Http\Message\Response;
-use React\Socket\SocketServer;
 
 class Run extends Command
 {
@@ -97,7 +94,11 @@ class Run extends Command
         });
 
         $discord->on(Event::MESSAGE_DELETE_BULK, function ($messages, Discord $discord) {
-            $ids = array_column($messages, 'id');
+            if ($messages instanceof \stdClass) {
+                $ids = [$messages->id];
+            } else {
+                $ids = array_column($messages, 'id');
+            }
             $lfgs = Lfg::whereIn('discord_id', $ids)->get();
             if (!$lfgs->isEmpty()) {
                 foreach ($lfgs as $lfg) {
@@ -118,9 +119,11 @@ class Run extends Command
             LfgSlashCommandListener::act($interaction, $discord);
             LfgDeleteSlashCommandListener::act($interaction, $discord);
             LfgEditSlashCommand::act($interaction, $discord);
+            LevelsSlashCommand::act($interaction, $discord);
             VoiceChannelCreateSlashCommand::act($interaction, $discord);
             VoiceChannelEditSlashCommand::act($interaction, $discord);
             VoiceChannelDeleteSlashCommand::act($interaction, $discord);
+            ZavalaSlashCommand::act($interaction, $discord);
         });
 
         $discord->run();

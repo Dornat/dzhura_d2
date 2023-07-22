@@ -148,9 +148,15 @@ return [
                 'type' => Option::SUB_COMMAND,
                 'options' => [
                     [
-                        'name' => 'id',
-                        'description' => 'Ідентифікатор користувача',
-                        'type' => Option::STRING,
+                        'name' => 'member',
+                        'description' => 'Користувач',
+                        'type' => Option::USER,
+                        'required' => true
+                    ],
+                    [
+                        'name' => 'amount',
+                        'description' => 'Кількість',
+                        'type' => Option::INTEGER,
                         'required' => true
                     ]
                 ]
@@ -166,9 +172,9 @@ return [
                 'type' => Option::SUB_COMMAND,
                 'options' => [
                     [
-                        'name' => 'id',
-                        'description' => 'Ідентифікатор користувача',
-                        'type' => Option::STRING,
+                        'name' => 'member',
+                        'description' => 'Користувач',
+                        'type' => Option::USER,
                         'required' => false
                     ]
                 ]
@@ -179,13 +185,23 @@ return [
                 'type' => Option::SUB_COMMAND,
                 'options' => [
                     [
-                        'name' => 'id',
-                        'description' => 'Ідентифікатор користувача',
-                        'type' => Option::STRING,
+                        'name' => 'member',
+                        'description' => 'Користувач',
+                        'type' => Option::USER,
+                        'required' => true
+                    ],
+                    [
+                        'name' => 'amount',
+                        'description' => 'Кількість',
+                        'type' => Option::INTEGER,
                         'required' => true
                     ]
                 ]
             ],
         ]
-    ]
+    ],
+    [
+        'name' => 'zavala',
+        'description' => 'Рандомна фраза від Командира Завали'
+    ],
 ];
