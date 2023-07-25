@@ -7,31 +7,62 @@ use App\Discord\SlashCommands\Levels\LevelingXPRewards;
 use App\Discord\SlashCommands\Settings\Objects\Levels\AnnouncementChannelEnum;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Level;
-use Carbon\Carbon;
+use Discord\Builders\Components\ActionRow;
+use Discord\Builders\Components\Button;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Http\Exceptions\NoPermissionsException;
 use Discord\InteractionType;
+use Discord\Parts\Embed\Embed;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Parts\User\Member;
 use Discord\Parts\User\User;
 use Exception;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use React\Promise\PromiseInterface;
 
 class LevelsSlashCommand implements SlashCommandListenerInterface
 {
     public const LEVELS = 'levels';
 
     public const GIVE_XP = 'give-xp';
+    public const LEADERBOARD = 'leaderboard';
+    public const RANK = 'rank';
+
+    public const REMOVE_RANK_MESSAGE_BTN = 'remove_rank_message_btn';
+
+    public const LEADERBOARD_DEFAULT_LIMIT = 10;
+    public const LEADERBOARD_PREV_BTN = 'leaderboard_prev_btn';
+    public const LEADERBOARD_NEXT_BTN = 'leaderboard_next_btn';
+    public const LEADERBOARD_REMV_BTN = 'leaderboard_remv_btn';
 
     public static function act(Interaction $interaction, Discord $discord): void
     {
+        if ($interaction->data->custom_id === self::REMOVE_RANK_MESSAGE_BTN) {
+            self::actOnRemoveRankMessageBtn($interaction);
+            return;
+        } else if ($interaction->data->custom_id === self::LEADERBOARD_NEXT_BTN) {
+            self::actOnLeaderboardNextBtn($interaction, $discord);
+            return;
+        } else if ($interaction->data->custom_id === self::LEADERBOARD_PREV_BTN) {
+            self::actOnLeaderboardPrevBtn($interaction, $discord);
+            return;
+        } else if ($interaction->data->custom_id === self::LEADERBOARD_REMV_BTN) {
+            self::actOnLeaderboardRemvBtn($interaction);
+            return;
+        }
+
         if (!($interaction->type === InteractionType::APPLICATION_COMMAND && $interaction->data->name === self::LEVELS)) {
             return;
         }
 
         if ($interaction->data->options->first()->name === self::GIVE_XP) {
             self::actOnGiveXPCommand($interaction, $discord);
+        } else if ($interaction->data->options->first()->name === self::LEADERBOARD) {
+            self::actOnLeaderboardCommand($interaction, $discord);
+        } else if ($interaction->data->options->first()->name === self::RANK) {
+            self::actOnRankCommand($interaction, $discord);
         }
     }
 
@@ -111,5 +142,143 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
                 $interaction->respondWithMessage(MessageBuilder::new()->setContent($messageAnnouncement . "\n\n ❗ Я бачу, що на сервері налаштовано відправку цього повідомлення в <#" . $settingsObject->levels->levelUpAnnouncement->customChannel->id . ">, але я не маю дозволу на відправку повідомлень в цей канал."));
             }
         }
+    }
+
+    private static function actOnLeaderboardCommand(Interaction $interaction, Discord $discord): void
+    {
+        self::sendLeaderBoardMessage($interaction, $discord, 1);
+    }
+
+    private static function actOnLeaderboardNextBtn(Interaction $interaction, Discord $discord): void
+    {
+        preg_match('/(\d+)/', $interaction->message->components[0]->components->last()->label, $matches);
+        $page = (int)$matches[1];
+        self::sendLeaderBoardMessage($interaction, $discord, $page, false);
+    }
+
+    private static function actOnLeaderboardPrevBtn(Interaction $interaction, Discord $discord): void
+    {
+        preg_match('/(\d+)/', $interaction->message->components[0]->components->first()->label, $matches);
+        $page = (int)$matches[1];
+        self::sendLeaderBoardMessage($interaction, $discord, $page, false);
+    }
+
+    private static function actOnLeaderboardRemvBtn(Interaction $interaction): void
+    {
+        $interaction->message->delete();
+    }
+
+    private static function sendLeaderBoardMessage(Interaction $interaction, Discord $discord, int $page, bool $respond = true, int $limit = self::LEADERBOARD_DEFAULT_LIMIT): void
+    {
+        $guildId = $interaction->guild_id;
+        $users = DB::select("SELECT * FROM `levels` WHERE `guild_id` = '$guildId' ORDER BY `xp_total` DESC LIMIT $limit OFFSET " . ($page * $limit) - $limit);
+        $usersTotal = DB::select("SELECT COUNT(*) as `count` FROM `levels` WHERE `guild_id` = '$guildId'");
+        $pagesTotal = (int)ceil($usersTotal[0]->count / $limit);
+
+        $memberPromises = [];
+        foreach ($users as $user) {
+            try {
+                $memberPromises[] = $interaction->guild->members->fetch($user->user_id);
+            } catch (Exception $e) {
+                Log::error('Could not fetch member', ['method' => __METHOD__, 'userId' => $user->user_id, 'exception' => $e->getMessage()]);
+            }
+        }
+
+        self::buildPromiseEmbeds($memberPromises, $users, $interaction, $discord)->then(function ($embeds) use ($interaction, $page, $pagesTotal, $respond) {
+            $btnActionRow = ActionRow::new()
+                ->addComponent(Button::new(Button::STYLE_SECONDARY, self::LEADERBOARD_PREV_BTN)->setLabel('< ' . max($page - 1, 1))->setDisabled($page === 1))
+                ->addComponent(Button::new(Button::STYLE_SECONDARY, self::LEADERBOARD_REMV_BTN)->setEmoji('🗑'))
+                ->addComponent(Button::new(Button::STYLE_SECONDARY, self::LEADERBOARD_NEXT_BTN)->setLabel(min($page + 1, $pagesTotal) . ' >')->setDisabled($page === $pagesTotal));
+            $msg = MessageBuilder::new()->addEmbed(...$embeds)->addComponent($btnActionRow);
+            if ($respond) {
+                $interaction->respondWithMessage($msg);
+            } else {
+                $interaction->updateMessage($msg);
+            }
+        });
+    }
+
+    private static function buildPromiseEmbeds(array $memberPromises, array $users, Interaction $interaction, Discord $discord): PromiseInterface
+    {
+        return \React\Promise\all($memberPromises)->then(function ($members) use ($users, $interaction, $discord) {
+            $embeds = [];
+
+            foreach ($users as $key => $user) {
+                $emoji = null;
+                $color = '#4e6987';
+                if ($user->id === 1) {
+                    $emoji = '🏆';
+                    $color = '#FFD700';
+                } else if ($user->id === 2) {
+                    $emoji = '🥈';
+                    $color = '#C0C0C0';
+                } else if ($user->id === 3) {
+                    $emoji = '🥉';
+                    $color = '#cd7f32';
+                }
+
+                $userName = $members[$key]->nick ?: $members[$key]->username;
+
+                $embed = new Embed($discord);
+                $embed->setColor($color);
+                $embed->setTitle(($emoji ?: "[$user->id]") . ' ' . $userName);
+                $embed->setThumbnail($members[$key]->user->avatar);
+                $embed->addFieldValues('Рівень', "**$user->level**", true);
+                $embed->addFieldValues('Загально XP', "**$user->xp_total** XP", true);
+                $embed->addFieldValues('Повідомлень', "**$user->messages**");
+
+                $embeds[] = $embed;
+            }
+
+            return $embeds;
+        });
+    }
+
+    private static function actOnRankCommand(Interaction $interaction, Discord $discord): void
+    {
+        $userId = $interaction->data?->options?->first()?->options['member']?->value;
+        $userId = $userId ?? $interaction->user->id;
+
+        try {
+            $interaction->guild->members->fetch($userId)->then(function (Member $member) use ($interaction, $discord, $userId) {
+                /** @var Level $levelModel */
+                $levelModel = Level::where('guild_id', $interaction->guild_id)->where('user_id', $userId)->first();
+                $rank = DB::select("SELECT user_id, xp_total,
+           (SELECT COUNT(*) + 1 
+            FROM levels AS t2 
+            WHERE t2.xp_total > t1.xp_total OR (t2.xp_total = t1.xp_total AND t2.user_id < t1.user_id)
+           ) AS rank
+    FROM levels AS t1
+    WHERE user_id = '$userId'");
+
+                $embed = new Embed($discord);
+                $embed->setThumbnail($member->user->avatar);
+                $embed->setColor('#024ad9');
+                $embed->setTitle('Ранг #' . $rank[0]->rank);
+                $embed->setDescription('Рівень **' . $levelModel->level . '**');
+                $embed->addFieldValues('Поточно', $levelModel->xp_current . ' XP', true);
+                $embed->addFieldValues('Всього', $levelModel->xp_total . ' XP', true);
+                $embed->addFieldValues('До наступного рівня', LevelingXPRewards::neededToLevelUp()[$levelModel->level] - $levelModel->xp_current . ' XP');
+                $embed->addFieldValues('Всього зараховано повідомлень', $levelModel->messages);
+
+                $msg = MessageBuilder::new()->addEmbed($embed);
+                $msg->addComponent(
+                    ActionRow::new()
+                        ->addComponent(
+                            Button::new(Button::STYLE_SECONDARY, self::REMOVE_RANK_MESSAGE_BTN)
+                                ->setEmoji('🗑')
+                        )
+                );
+
+                $interaction->respondWithMessage($msg);
+            });
+        } catch (Exception $e) {
+            Log::error('Could not fetch member', ['method' => __METHOD__, 'userId' => $userId, 'exception' => $e->getMessage()]);
+        }
+    }
+
+    private static function actOnRemoveRankMessageBtn(Interaction $interaction): void
+    {
+        $interaction->message->delete();
     }
 }
