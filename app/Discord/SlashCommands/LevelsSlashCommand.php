@@ -5,6 +5,7 @@ namespace App\Discord\SlashCommands;
 use App\Discord\SlashCommands\Levels\LevelingSystem;
 use App\Discord\SlashCommands\Levels\LevelingXPRewards;
 use App\Discord\SlashCommands\Settings\Objects\Levels\AnnouncementChannelEnum;
+use App\Discord\SlashCommands\Settings\Objects\Levels\RoleRewardsTypeEnum;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Level;
 use Discord\Builders\Components\ActionRow;
@@ -29,6 +30,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
     public const GIVE_XP = 'give-xp';
     public const LEADERBOARD = 'leaderboard';
     public const RANK = 'rank';
+    public const REMOVE_XP = 'remove-xp';
 
     public const REMOVE_RANK_MESSAGE_BTN = 'remove_rank_message_btn';
 
@@ -63,6 +65,8 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
             self::actOnLeaderboardCommand($interaction, $discord);
         } else if ($interaction->data->options->first()->name === self::RANK) {
             self::actOnRankCommand($interaction, $discord);
+        } else if ($interaction->data->options->first()->name === self::REMOVE_XP) {
+            self::actOnRemoveXPCommand($interaction, $discord);
         }
     }
 
@@ -280,5 +284,68 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
     private static function actOnRemoveRankMessageBtn(Interaction $interaction): void
     {
         $interaction->message->delete();
+    }
+
+    private static function actOnRemoveXPCommand(Interaction $interaction, Discord $discord): void
+    {
+        if (!$interaction->member->permissions->administrator) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Щось не схоже, що ти маєш права адміністратора. 👁'), true);
+            return;
+        }
+
+        $userId = $interaction->data->options->first()->options['member']->value;
+        $amount = $interaction->data->options->first()->options['amount']->value;
+
+        $levelModel = Level::where('guild_id', $interaction->guild_id)->where('user_id', $userId)->first();
+        $levelModel->xp_total = max($levelModel->xp_total - $amount, 0);
+        $xpCurrentRemoved = $levelModel->xp_current - $amount;
+
+        if ($xpCurrentRemoved < 0) {
+            $levelsToRemove = 0;
+            $leftoverXPForCurrLvl = $amount - $levelModel->xp_current;
+            $xpCurrentResult = 0;
+            for ($i = $levelModel->level - 1; $leftoverXPForCurrLvl > 0; $i--) {
+                $xpCurrentResult = LevelingXPRewards::neededToLevelUp()[$i] - $leftoverXPForCurrLvl;
+                if ($xpCurrentResult < 0) {
+                    $xpCurrentResult = 0;
+                }
+                $leftoverXPForCurrLvl -= LevelingXPRewards::neededToLevelUp()[$i];
+                $levelsToRemove++;
+            }
+            $levelModel->level -= $levelsToRemove;
+            $levelModel->xp_current = $xpCurrentResult;
+            $levelModel->save();
+            $guild = $discord->guilds->get('id', $interaction->guild_id);
+            try {
+                $guild->members->fetch($userId, true)->then(function (Member $member) use ($interaction, $discord, $userId, $guild, $levelModel) {
+                    $settingsObject = SettingsObject::getFromGuildId($guild->id);
+                    if ($settingsObject->levels->roleRewards->removeRoleRewardsOnDemotion) {
+                        self::removeRoleRewards($member, $levelModel->level, $settingsObject->levels->roleRewards->roleRewards);
+                    }
+                    $interaction->respondWithMessage(MessageBuilder::new()->setContent('Користувачу <@' . $userId . '> було успішно знято XP поінти.'), true);
+                });
+            } catch (Exception $e) {
+            }
+        } else {
+            $levelModel->xp_current = $xpCurrentRemoved;
+            $levelModel->save();
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Користувачу <@' . $userId . '> було успішно знято XP поінти.'), true);
+        }
+    }
+
+    private static function removeRoleRewards(Member $member, int $level, array $roleRewards): void
+    {
+        if (empty($roleRewards)) {
+            return;
+        }
+        $allMemberRoles = array_map('strval', array_keys($member->roles->toArray()));
+
+        krsort($roleRewards);
+
+        foreach ($roleRewards as $lvl => $role) {
+            if ($lvl > $level && in_array($role, $allMemberRoles)) {
+                $member->removeRole($role);
+            }
+        }
     }
 }
