@@ -198,6 +198,11 @@ return [
                     ]
                 ]
             ],
+            [
+                'name' => 'table',
+                'description' => 'Таблиця рівнів і скільки досвіду потрібно',
+                'type' => Option::SUB_COMMAND,
+            ],
         ]
     ],
     [

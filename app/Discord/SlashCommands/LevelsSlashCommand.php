@@ -22,6 +22,8 @@ use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use React\Promise\PromiseInterface;
+use Symfony\Component\Console\Helper\Table;
+use Symfony\Component\Console\Output\BufferedOutput;
 
 class LevelsSlashCommand implements SlashCommandListenerInterface
 {
@@ -31,6 +33,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
     public const LEADERBOARD = 'leaderboard';
     public const RANK = 'rank';
     public const REMOVE_XP = 'remove-xp';
+    public const TABLE = 'table';
 
     public const REMOVE_RANK_MESSAGE_BTN = 'remove_rank_message_btn';
 
@@ -67,6 +70,8 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
             self::actOnRankCommand($interaction, $discord);
         } else if ($interaction->data->options->first()->name === self::REMOVE_XP) {
             self::actOnRemoveXPCommand($interaction, $discord);
+        } else if ($interaction->data->options->first()->name === self::TABLE) {
+            self::actOnTableCommand($interaction, $discord);
         }
     }
 
@@ -347,5 +352,25 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
                 $member->removeRole($role);
             }
         }
+    }
+
+    private static function actOnTableCommand(Interaction $interaction, Discord $discord): void
+    {
+        $bufferedOutput = new BufferedOutput();
+        $table = new Table($bufferedOutput);
+        $table->setStyle('box-double');
+        $tableRows = [];
+
+        for ($lvl = 0; $lvl <= 42; $lvl++) {
+            $tableRows[] = [$lvl, LevelingXPRewards::neededToLevelUp()[$lvl], LevelingXPRewards::totalXPOnEachLevel()[$lvl]];
+        }
+
+        $table->setHeaders(['Рівень', 'XP потрібно', 'XP загально'])
+        ->setRows($tableRows);
+        $table->render();
+
+        $str = $bufferedOutput->fetch();
+
+        $interaction->respondWithMessage(MessageBuilder::new()->setContent("```$str```"), true);
     }
 }
