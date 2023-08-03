@@ -5,7 +5,7 @@ namespace App\Discord\SlashCommands;
 use App\Discord\Helpers\SlashCommandHelper;
 use App\Discord\SlashCommands\Lfg\ActivityTypes;
 use App\Discord\SlashCommands\Lfg\TaggingFrases;
-use App\Discord\SlashCommands\Settings\SettingsObject;
+use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Lfg;
 use App\Participant;
 use App\ParticipantInQueue;

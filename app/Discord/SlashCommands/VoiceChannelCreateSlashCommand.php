@@ -2,7 +2,7 @@
 
 namespace App\Discord\SlashCommands;
 
-use App\Discord\SlashCommands\Settings\SettingsObject;
+use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Lfg;
 use App\VoiceChannel;
 use Discord\Builders\MessageBuilder;
