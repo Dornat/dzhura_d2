@@ -23,6 +23,6 @@ class Levels extends Migration
 
     public function down(): void
     {
-        //
+        Schema::drop('levels');
     }
 }
