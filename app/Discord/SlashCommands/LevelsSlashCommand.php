@@ -215,13 +215,13 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
             foreach ($users as $key => $user) {
                 $emoji = null;
                 $color = '#4e6987';
-                if ($user->id === 1) {
+                if ($key === 0) {
                     $emoji = '🏆';
                     $color = '#FFD700';
-                } else if ($user->id === 2) {
+                } else if ($key === 1) {
                     $emoji = '🥈';
                     $color = '#C0C0C0';
-                } else if ($user->id === 3) {
+                } else if ($key === 2) {
                     $emoji = '🥉';
                     $color = '#cd7f32';
                 }
@@ -230,7 +230,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
                 $embed = new Embed($discord);
                 $embed->setColor($color);
-                $embed->setTitle(($emoji ?: "[$user->id]") . ' ' . $userName);
+                $embed->setTitle(($emoji ?: '[' . $key + 1 . ']') . ' ' . $userName);
                 $embed->setThumbnail($members[$key]->user->avatar);
                 $embed->addFieldValues('Рівень', "**$user->level**", true);
                 $embed->addFieldValues('Загально XP', "**$user->xp_total** XP", true);
