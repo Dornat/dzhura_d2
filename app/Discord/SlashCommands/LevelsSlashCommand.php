@@ -5,7 +5,6 @@ namespace App\Discord\SlashCommands;
 use App\Discord\SlashCommands\Levels\LevelingSystem;
 use App\Discord\SlashCommands\Levels\LevelingXPRewards;
 use App\Discord\SlashCommands\Settings\Objects\Levels\AnnouncementChannelEnum;
-use App\Discord\SlashCommands\Settings\Objects\Levels\RoleRewardsTypeEnum;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Level;
 use Discord\Builders\Components\ActionRow;
@@ -180,7 +179,8 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
     private static function sendLeaderBoardMessage(Interaction $interaction, Discord $discord, int $page, bool $respond = true, int $limit = self::LEADERBOARD_DEFAULT_LIMIT): void
     {
         $guildId = $interaction->guild_id;
-        $users = DB::select("SELECT * FROM `levels` WHERE `guild_id` = '$guildId' ORDER BY `xp_total` DESC LIMIT $limit OFFSET " . ($page * $limit) - $limit);
+        $pageMultiplier = ($page * $limit) - $limit;
+        $users = DB::select("SELECT * FROM `levels` WHERE `guild_id` = '$guildId' ORDER BY `xp_total` DESC LIMIT $limit OFFSET $pageMultiplier");
         $usersTotal = DB::select("SELECT COUNT(*) as `count` FROM `levels` WHERE `guild_id` = '$guildId'");
         $pagesTotal = (int)ceil($usersTotal[0]->count / $limit);
 
@@ -193,7 +193,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
             }
         }
 
-        self::buildPromiseEmbeds($memberPromises, $users, $interaction, $discord)->then(function ($embeds) use ($interaction, $page, $pagesTotal, $respond) {
+        self::buildPromiseEmbeds($memberPromises, $users, $interaction, $discord, $pageMultiplier)->then(function ($embeds) use ($interaction, $page, $pagesTotal, $respond, $pageMultiplier) {
             $btnActionRow = ActionRow::new()
                 ->addComponent(Button::new(Button::STYLE_SECONDARY, self::LEADERBOARD_PREV_BTN)->setLabel('< ' . max($page - 1, 1))->setDisabled($page === 1))
                 ->addComponent(Button::new(Button::STYLE_SECONDARY, self::LEADERBOARD_REMV_BTN)->setEmoji('🗑'))
@@ -207,21 +207,22 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
         });
     }
 
-    private static function buildPromiseEmbeds(array $memberPromises, array $users, Interaction $interaction, Discord $discord): PromiseInterface
+    private static function buildPromiseEmbeds(array $memberPromises, array $users, Interaction $interaction, Discord $discord, int $pageMultiplier): PromiseInterface
     {
-        return \React\Promise\all($memberPromises)->then(function ($members) use ($users, $interaction, $discord) {
+        return \React\Promise\all($memberPromises)->then(function ($members) use ($users, $interaction, $discord, $pageMultiplier) {
             $embeds = [];
 
             foreach ($users as $key => $user) {
                 $emoji = null;
                 $color = '#4e6987';
-                if ($key === 0) {
+                $position = $key + 1 + $pageMultiplier;
+                if ($position === 1) {
                     $emoji = '🏆';
                     $color = '#FFD700';
-                } else if ($key === 1) {
+                } else if ($position === 2) {
                     $emoji = '🥈';
                     $color = '#C0C0C0';
-                } else if ($key === 2) {
+                } else if ($position === 3) {
                     $emoji = '🥉';
                     $color = '#cd7f32';
                 }
@@ -230,7 +231,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
                 $embed = new Embed($discord);
                 $embed->setColor($color);
-                $embed->setTitle(($emoji ?: '[' . $key + 1 . ']') . ' ' . $userName);
+                $embed->setTitle(($emoji ?: "[$position]") . ' ' . $userName);
                 $embed->setThumbnail($members[$key]->user->avatar);
                 $embed->addFieldValues('Рівень', "**$user->level**", true);
                 $embed->addFieldValues('Загально XP', "**$user->xp_total** XP", true);
