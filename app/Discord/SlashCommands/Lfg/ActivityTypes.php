@@ -15,6 +15,7 @@ class ActivityTypes
     public const RAID_VOD = 'vod';
     public const RAID_KF = 'kf';
     public const RAID_RON = 'ron';
+    public const RAID_CE = 'ce';
 
     public const PVP = 'pvp';
     public const PVE = 'pve';
@@ -30,6 +31,10 @@ class ActivityTypes
                 'color' => '#f0c907',
                 'types' => [
                     // In the order of appearance, newer at the top.
+                    self::RAID_CE => [
+                        'label' => 'Загибель Кроти (CE)',
+                        'image' => 'https://d1lss44hh2trtw.cloudfront.net/assets/article/2023/08/22/crotas-end-raid-start-time-destiny-2_feature.jpg'
+                    ],
                     self::RAID_RON => [
                         'label' => 'Коріння жахів (RON)',
                         'image' => 'https://i.ibb.co/64wKZ0m/4105275-rootofnightmares.jpg'
