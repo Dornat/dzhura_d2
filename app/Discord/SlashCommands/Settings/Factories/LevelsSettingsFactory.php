@@ -63,8 +63,8 @@ class LevelsSettingsFactory
 
         $activationSelect = SelectMenu::new(self::ACTIVATE_SELECT)
             ->setPlaceholder('Активація системи левелінгу');
-        $activationSelect->addOption(new Option('Деактивовано', false));
-        $activationSelect->addOption(new Option('Активовано', true));
+        $activationSelect->addOption(new Option('Деактивовано', 0));
+        $activationSelect->addOption(new Option('Активовано', 1));
 
         $msg = MessageBuilder::new()
             ->setContent("> 📖 За замовчуванням система левелінгу вимкнена. Тут можна її активувати.\n> \n> ⚙")
@@ -311,8 +311,8 @@ class LevelsSettingsFactory
 
         $components[] = SelectMenu::new(self::REMOVE_ROLE_REWARDS_ON_DEMOTION_SELECT)
             ->setPlaceholder('Прибирати ролі при зменшенні рівня')
-            ->addOption(new Option('Ні', false))
-            ->addOption(new Option('Так', true));
+            ->addOption(new Option('Ні', 0))
+            ->addOption(new Option('Так', 1));
 
         $levelNumberSelect = SelectMenu::new(self::ROLE_REWARDS_LEVEL_NUMBER_SELECT)
             ->setPlaceholder('Рівень');
@@ -683,8 +683,8 @@ class LevelsSettingsFactory
 
         $components[] = SelectMenu::new(self::NO_XP_ROLES_CONDITION_SELECT)
             ->setPlaceholder('Умова')
-            ->addOption(new Option('Дозволити всім ролям отримувати XP (досвід)', true))
-            ->addOption(new Option('Заборонити всім ролям отримувати XP (досвід)', false));
+            ->addOption(new Option('Дозволити всім ролям отримувати XP (досвід)', 1))
+            ->addOption(new Option('Заборонити всім ролям отримувати XP (досвід)', 0));
 
         $components[] = SelectMenuRoles::new(self::NO_XP_ROLES_LIST_SELECT)
             ->setPlaceholder('Окрім ролей')
@@ -794,8 +794,8 @@ class LevelsSettingsFactory
 
         $components[] = SelectMenu::new(self::NO_XP_CHANNELS_CONDITION_SELECT)
             ->setPlaceholder('Умова')
-            ->addOption(new Option('Дозволити в усіх каналах отримувати XP (досвід)', true))
-            ->addOption(new Option('Заборонити в усіх каналах отримувати XP (досвід)', false));
+            ->addOption(new Option('Дозволити в усіх каналах отримувати XP (досвід)', 1))
+            ->addOption(new Option('Заборонити в усіх каналах отримувати XP (досвід)', 0));
 
         $components[] = SelectMenuChannels::new(self::NO_XP_CHANNELS_LIST_SELECT)
             ->setChannelTypes([SelectMenuChannels::GUILD_TEXT_CHANNEL_TYPE])
