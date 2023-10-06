@@ -80,6 +80,10 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Щось не схоже, що ти маєш права адміністратора. 👁'), true);
             return;
         }
+        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
+            return;
+        }
 
         $userId = $interaction->data->options->first()->options['member']->value;
         $amount = $interaction->data->options->first()->options['amount']->value;
@@ -154,6 +158,10 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
     private static function actOnLeaderboardCommand(Interaction $interaction, Discord $discord): void
     {
+        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
+            return;
+        }
         self::sendLeaderBoardMessage($interaction, $discord, 1);
     }
 
@@ -187,7 +195,16 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
         $memberPromises = [];
         foreach ($users as $user) {
             try {
-                $memberPromises[] = $interaction->guild->members->fetch($user->user_id);
+                $memberPromises[] = $interaction->guild->members->fetch($user->user_id)->then(function ($memberFetched) {
+                    return $memberFetched;
+                }, function () use ($discord, $user) {
+                    return $discord->users->fetch($user->user_id)->then(function ($userFetched) use ($discord) {
+                        return new Member($discord, [
+                            'user' => $userFetched,
+                            'username' => $userFetched->username,
+                        ]);
+                    });
+                });
             } catch (Exception $e) {
                 Log::error('Could not fetch member', ['method' => __METHOD__, 'userId' => $user->user_id, 'exception' => $e->getMessage()]);
             }
@@ -246,20 +263,26 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
     private static function actOnRankCommand(Interaction $interaction, Discord $discord): void
     {
+        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
+            return;
+        }
+
         $userId = $interaction->data?->options?->first()?->options['member']?->value;
         $userId = $userId ?? $interaction->user->id;
 
         try {
             $interaction->guild->members->fetch($userId)->then(function (Member $member) use ($interaction, $discord, $userId) {
+                $guildId = $interaction->guild_id;
                 /** @var Level $levelModel */
-                $levelModel = Level::where('guild_id', $interaction->guild_id)->where('user_id', $userId)->first();
+                $levelModel = Level::where('guild_id', $guildId)->where('user_id', $userId)->first();
                 $rank = DB::select("SELECT user_id, xp_total,
            (SELECT COUNT(*) + 1 
             FROM levels AS t2 
-            WHERE t2.xp_total > t1.xp_total OR (t2.xp_total = t1.xp_total AND t2.user_id < t1.user_id)
+            WHERE guild_id = '$guildId' AND (t2.xp_total > t1.xp_total OR (t2.xp_total = t1.xp_total AND t2.user_id < t1.user_id))
            ) AS rank
     FROM levels AS t1
-    WHERE user_id = '$userId'");
+    WHERE user_id = '$userId' AND guild_id = '$guildId'");
 
                 $embed = new Embed($discord);
                 $embed->setThumbnail($member->user->avatar);
@@ -296,6 +319,10 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
     {
         if (!$interaction->member->permissions->administrator) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Щось не схоже, що ти маєш права адміністратора. 👁'), true);
+            return;
+        }
+        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
             return;
         }
 
@@ -357,6 +384,10 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
     private static function actOnTableCommand(Interaction $interaction, Discord $discord): void
     {
+        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+            $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
+            return;
+        }
         $bufferedOutput = new BufferedOutput();
         $table = new Table($bufferedOutput);
         $table->setStyle('box-double');

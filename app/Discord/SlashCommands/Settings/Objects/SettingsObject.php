@@ -57,4 +57,16 @@ class SettingsObject implements SettingsObjectInterface
 
         return $settingsObject;
     }
+
+    public static function isActiveForGuild(string $guildId): bool
+    {
+        $settingRow = Setting::where('guild_id', $guildId)->first();
+
+        if (!is_null($settingRow)) {
+            $settingsObject = new self(json_decode($settingRow->object, true));
+            return $settingsObject->levels->active;
+        }
+
+        return false;
+    }
 }
