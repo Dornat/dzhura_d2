@@ -2,6 +2,7 @@
 
 namespace App\Discord\SlashCommands\Settings\Factories;
 
+use App\Discord\Helpers\SlashCommandHelper;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Setting;
 use Discord\Builders\Components\ActionRow;
@@ -9,8 +10,10 @@ use Discord\Builders\Components\Button;
 use Discord\Builders\Components\Option;
 use Discord\Builders\Components\SelectMenu;
 use Discord\Builders\Components\TextInput;
+use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\Parts\Embed\Embed;
+use Discord\Parts\Embed\Field;
 use Discord\Parts\Interactions\Interaction;
 
 class GlobalSettingsFactory
@@ -52,7 +55,19 @@ class GlobalSettingsFactory
         $settingsModel->updated_by = $interaction->member->user->id;
         $settingsModel->save();
 
-        $interaction->acknowledge();
+        $newEmbed = $interaction->message->embeds->first();
+        /** @var Field $field */
+        $field = $newEmbed->fields->first();
+        $newEmbed->offsetUnset('fields');
+        $field->offsetSet('value', $settingsObject->global->timeZone);
+        $newEmbed->addField($field);
+
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents(SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction))
+        );
     }
 
     public static function actOnGlobalSettingsModalOpenBtn(Interaction $interaction, Discord $discord): void

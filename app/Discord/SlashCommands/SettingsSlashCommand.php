@@ -2,12 +2,12 @@
 
 namespace App\Discord\SlashCommands;
 
+use App\Discord\SlashCommands\ActionMaps\LevelsSettingsFactoryActionMap;
+use App\Discord\SlashCommands\ActionMaps\SettingsSlashCommandActionMap;
 use App\Discord\SlashCommands\Settings\Factories\GlobalSettingsFactory;
-use App\Discord\SlashCommands\Settings\Factories\LevelsSettingsFactory;
+use App\Discord\SlashCommands\Settings\Factories\LfgSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\VoiceCreateSettingsFactory;
-use App\Discord\SlashCommands\Settings\Objects\SettingsDefaultObject;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
-use App\Setting;
 use Discord\Builders\MessageBuilder;
 use Discord\Discord;
 use Discord\InteractionType;
@@ -19,6 +19,7 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
     public const GLOBAL = 'global';
     public const VC = 'voicecreate';
     public const LEVELS = 'levels';
+    public const LFG = 'lfg';
 
     public static function act(Interaction $interaction, Discord $discord): void
     {
@@ -28,80 +29,42 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
                 return;
             }
 
-            if ($interaction->data->options->first()->name === self::VC) {
-                self::actVCResponse($interaction, $discord);
-            } else if ($interaction->data->options->first()->name === self::LEVELS) {
-                self::actLevelsResponse($interaction, $discord);
-            } else {
-                self::actGlobalResponse($interaction, $discord);
-            }
-        } else if ($interaction->data->custom_id === GlobalSettingsFactory::SETTINGS_GLOBAL_TIMEZONE_SELECT) {
-            GlobalSettingsFactory::actOnGlobalTimezoneSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === GlobalSettingsFactory::SETTINGS_GLOBAL_OPEN_MODAL_BTN) {
-            GlobalSettingsFactory::actOnGlobalSettingsModalOpenBtn($interaction, $discord);
+            /**
+             * @see self::actVCResponse()
+             * @see self::actLevelsResponse()
+             * @see self::actGlobalResponse()
+             * @see self::actLfgResponse()
+             */
+            $action = match($interaction->data->options->first()->name) {
+                self::VC => 'actVCResponse',
+                self::LEVELS => 'actLevelsResponse',
+                self::LFG => 'actLfgResponse',
+                default => 'actGlobalResponse',
+            };
+
+            self::{$action}($interaction, $discord);
         } else if ($interaction->type === InteractionType::MESSAGE_COMPONENT && $interaction->data->custom_id === VoiceCreateSettingsFactory::SETTINGS_VC_CREATION_ROLES_SELECT) {
             VoiceCreateSettingsFactory::actOnVCRoleSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === VoiceCreateSettingsFactory::SETTINGS_VC_OPEN_MODAL_BTN) {
-            VoiceCreateSettingsFactory::actOnVoiceCreateSettingsModalOpenBtn($interaction, $discord);
-        } else if ($interaction->data->custom_id === VoiceCreateSettingsFactory::SETTINGS_VC_MODAL) {
-            VoiceCreateSettingsFactory::actOnVoiceCreateSettingsModalSubmit($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::ACTIVATE_SELECT) {
-            LevelsSettingsFactory::actOnActivateSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::ANNOUNCEMENT_CHANNEL_SELECT) {
-            LevelsSettingsFactory::actOnAnnouncementChannelSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::CUSTOM_CHANNEL_SELECT) {
-            LevelsSettingsFactory::actOnCustomChannelSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::CUSTOMIZE_ANNOUNCEMENT_MESSAGE_BTN) {
-            LevelsSettingsFactory::actOnCustomizeAnnouncementMessageBtn($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::ROLE_REWARDS_TYPE_SELECT) {
-            LevelsSettingsFactory::actOnRoleRewardsTypeSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::REMOVE_ROLE_REWARDS_ON_DEMOTION_SELECT) {
-            LevelsSettingsFactory::actOnRemoveRoleRewardsOnDemotionSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::ROLE_REWARDS_LEVEL_NUMBER_SELECT) {
-            LevelsSettingsFactory::actOnRoleRewardsLevelNumberSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::ROLE_REWARDS_LEVEL_ROLE_SELECT) {
-            LevelsSettingsFactory::actOnRoleRewardsLevelRoleSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::ROLE_REWARDS_BTN_CLEAR) {
-            LevelsSettingsFactory::actOnRoleRewardsBtnClear($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_SELECT) {
-            LevelsSettingsFactory::actOnXPRateSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_ROLE_SELECT) {
-            LevelsSettingsFactory::actOnXPRateRoleSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_ROLE_RATE_SELECT) {
-            LevelsSettingsFactory::actOnXPRateRoleRateSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::XP_RATE_ROLE_RATE_BTN_CLEAR) {
-            LevelsSettingsFactory::actOnXPRateRoleRateBtnClear($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_ROLES_CONDITION_SELECT) {
-            LevelsSettingsFactory::actOnNoXPRolesConditionSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_ROLES_LIST_SELECT) {
-            LevelsSettingsFactory::actOnNoXPRolesListSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_ROLES_LIST_BTN_CLEAR) {
-            LevelsSettingsFactory::actOnNoXPRolesListBtnClear($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_CHANNELS_CONDITION_SELECT) {
-            LevelsSettingsFactory::actOnNoXPChannelsConditionSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_CHANNELS_LIST_SELECT) {
-            LevelsSettingsFactory::actOnNoXPChannelsListSelect($interaction, $discord);
-        } else if ($interaction->data->custom_id === LevelsSettingsFactory::NO_XP_CHANNELS_LIST_BTN_CLEAR) {
-            LevelsSettingsFactory::actOnNoXPChannelsListBtnClear($interaction, $discord);
+        } else {
+            $actionsMap = SettingsSlashCommandActionMap::list();
+
+            $customId = $interaction->data->custom_id;
+            if (isset($actionsMap[$customId])) {
+                $factoryName = $actionsMap[$customId]['factory'];
+                $methodName = $actionsMap[$customId]['method'];
+                $factoryName::{$methodName}($interaction, $discord);
+            }
         }
     }
 
     public static function actGlobalResponse(Interaction $interaction, Discord $discord): void
     {
-        $guildId = $interaction->guild_id;
-
-        $settingRow = Setting::where('guild_id', $guildId)->first();
-
-        if (is_null($settingRow)) {
-            $settingsObject = SettingsDefaultObject::get();
-        } else {
-            $settingsObject = SettingsObject::getFromGuildId($guildId);
-        }
+        $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
 
         $globalSettingsFactory = new GlobalSettingsFactory($discord, $settingsObject);
 
         $msg = MessageBuilder::new()
-            ->setContent("> Для того щоби побачити зміни, потрібно перезапустити команду `/settings`.\n> Через обмеженість discord API зміна налаштувань через поля селекторів розташовані окремими полями, а введення налаштувань для інших полів винесені в модальні вікна, які можна викликати натиснувши на відповідні кнопки.")
+            ->setContent("> 📖 Через обмеженість discord API зміна налаштувань через поля селекторів розташовані окремими полями, а введення налаштувань для інших полів винесені в модальні вікна, які можна викликати натиснувши на відповідні кнопки.\n> \n> ⚙")
             ->addEmbed(
                 $globalSettingsFactory->embed,
             )
@@ -115,20 +78,12 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
 
     public static function actVCResponse(Interaction $interaction, Discord $discord): void
     {
-        $guildId = $interaction->guild_id;
-
-        $settingRow = Setting::where('guild_id', $guildId)->first();
-
-        if (is_null($settingRow)) {
-            $settingsObject = SettingsDefaultObject::get();
-        } else {
-            $settingsObject = SettingsObject::getFromGuildId($guildId);
-        }
+        $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
 
         $voiceCreateFactory = new VoiceCreateSettingsFactory($discord, $settingsObject);
 
         $msg = MessageBuilder::new()
-            ->setContent("> Для того щоби побачити зміни, потрібно перезапустити команду `/settings`.\n> Через обмеженість discord API зміна налаштувань через поля селекторів розташовані окремими полями, а введення налаштувань для інших полів винесені в модальні вікна, які можна викликати натиснувши на відповідні кнопки.")
+            ->setContent("> 📖 Через обмеженість discord API зміна налаштувань через поля селекторів розташовані окремими полями, а введення налаштувань для інших полів винесені в модальні вікна, які можна викликати натиснувши на відповідні кнопки.\n> \n> ⚙")
             ->addEmbed(
                 $voiceCreateFactory->embed
             )
@@ -142,28 +97,34 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
 
     public static function actLevelsResponse(Interaction $interaction, Discord $discord): void
     {
-        $guildId = $interaction->guild_id;
+        $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
 
-        $settingRow = Setting::where('guild_id', $guildId)->first();
+        $actionsMap = LevelsSettingsFactoryActionMap::list();
 
-        if (is_null($settingRow)) {
-            $settingsObject = SettingsDefaultObject::get();
-        } else {
-            $settingsObject = SettingsObject::getFromGuildId($guildId);
+        $customId = $interaction->data->options->first()->options->first()->name;
+        if (isset($actionsMap[$customId])) {
+            $factoryName = $actionsMap[$customId]['factory'];
+            $methodName = $actionsMap[$customId]['method'];
+            $factoryName::{$methodName}($interaction, $discord, $settingsObject);
         }
+    }
 
-        if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::ACTIVATE) {
-            LevelsSettingsFactory::actOnActivateCommand($interaction, $discord, $settingsObject);
-        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::LEVEL_UP_ANNOUNCEMENT) {
-            LevelsSettingsFactory::actOnLevelUpAnnouncementCommand($interaction, $discord, $settingsObject);
-        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::ROLE_REWARDS) {
-            LevelsSettingsFactory::actOnRoleRewardsCommand($interaction, $discord, $settingsObject);
-        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::XP_RATE) {
-            LevelsSettingsFactory::actOnXPRateCommand($interaction, $discord, $settingsObject);
-        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::NO_XP_ROLES) {
-            LevelsSettingsFactory::actOnNoXPRolesCommand($interaction, $discord, $settingsObject);
-        } else if ($interaction->data->options->first()->options->first()->name === LevelsSettingsFactory::NO_XP_CHANNELS) {
-            LevelsSettingsFactory::actOnNoXPChannelsCommand($interaction, $discord, $settingsObject);
-        }
+    public static function actLfgResponse(Interaction $interaction, Discord $discord): void
+    {
+        $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
+
+        $lfgSettingsFactory = new LfgSettingsFactory($discord, $settingsObject);
+
+        $msg = MessageBuilder::new()
+            ->setContent("> 📖 Тут можна обрати ті ролі, які будуть тегнуті після створення групи.\n> \n> ⚙")
+            ->addEmbed(
+                $lfgSettingsFactory->embed
+            )
+            ->setComponents([
+                $lfgSettingsFactory->activationSelect,
+                $lfgSettingsFactory->roleSelect,
+            ]);
+
+        $interaction->respondWithMessage($msg, true);
     }
 }

@@ -18,6 +18,11 @@ return [
                 'type' => Option::SUB_COMMAND,
             ],
             [
+                'name' => 'lfg',
+                'description' => 'Налаштування команди /lfg',
+                'type' => Option::SUB_COMMAND,
+            ],
+            [
                 'name' => 'levels',
                 'description' => 'Налаштування команди /levels',
                 'type' => Option::SUB_COMMAND_GROUP,
@@ -53,7 +58,7 @@ return [
                         'type' => Option::SUB_COMMAND
                     ],
                 ]
-            ]
+            ],
         ]
     ],
     [

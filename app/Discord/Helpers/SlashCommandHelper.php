@@ -21,6 +21,13 @@ class SlashCommandHelper
         }, $userIds));
     }
 
+    public static function assembleAtRoleString(array $roleIds): string
+    {
+        return implode(', ', array_map(function ($id) {
+            return "<@&$id>";
+        }, $roleIds));
+    }
+
     public static function constructEmbedActionRowFromComponentRepository(ComponentRepository $componentRepository): ActionRow
     {
         $embedActionRow = ActionRow::new();

@@ -10,12 +10,14 @@ class SettingsObject implements SettingsObjectInterface
     public VCObject $vc;
     public GlobalSettingsObject $global;
     public LevelsObject $levels;
+    public LfgObject $lfg;
 
     public function __construct(array $json)
     {
         $this->global = new GlobalSettingsObject($json['global'] ?? []);
         $this->vc = new VCObject($json['vc'] ?? []);
         $this->levels = new LevelsObject($json['levels'] ?? []);
+        $this->lfg = new LfgObject($json['lfg'] ?? []);
     }
 
     public function jsonSerialize(): array
@@ -24,6 +26,7 @@ class SettingsObject implements SettingsObjectInterface
         $result['global'] = $this->global;
         $result['vc'] = $this->vc;
         $result['levels'] = $this->levels;
+        $result['lfg'] = $this->lfg;
         return $result;
     }
 

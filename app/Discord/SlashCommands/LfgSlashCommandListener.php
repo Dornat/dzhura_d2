@@ -234,7 +234,7 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             }
 
             $owner = $interaction->member->user->id;
-            $title = $raidType ? ActivityTypes::list()[ActivityTypes::RAID]['types'][$raidType]['label'] : $components['activity_name'];
+            $title = $components['activity_name'];
             $description = $components['description'];
             $groupSize = (int)$components['group_size'];
             $manual = $components['manual'];
@@ -258,7 +258,11 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $embed->setTitle($title);
             $embed->addFieldValues('Опис', $description);
             $embed->addFieldValues('Дата', '<t:' . $date->getTimestamp() . ':f>');
-            $embed->setFooter('ID: ' . $lfg->uuid . ' | Ініціатор: ' . ($interaction->member->nick ?? $interaction->member->username));
+            $footer = 'ID: ' . $lfg->uuid . ' | Ініціатор: ' . ($interaction->member->nick ?? $interaction->member->username);
+            if (!empty($raidType)) {
+                $footer .= ' | Рейд: ' . ActivityTypes::list()[ActivityTypes::RAID]['types'][$raidType]['label'];
+            }
+            $embed->setFooter($footer);
 
             $iWantToGoBtn = Button::new(Button::STYLE_SUCCESS)->setLabel('Хочу піти')->setCustomId(self::I_WANT_TO_GO_BTN);
             $reserveBtn = Button::new(Button::STYLE_PRIMARY)->setLabel('Резерв')->setCustomId(self::RESERVE_BTN);
@@ -282,10 +286,18 @@ class LfgSlashCommandListener implements SlashCommandListenerInterface
             $embeddedMessage = MessageBuilder::new()->addEmbed($embed)->addComponent($embedActionRow)->addComponent($embedActionRow2);
 
             $interaction->updateMessage(MessageBuilder::new()->setComponents([])->setContent('Створення пройшло успішно! Тримай кавунця - :watermelon:'));
-            $interaction->channel->sendMessage($embeddedMessage)->done(function (Message $message) use ($lfg) {
-                $lfg->discord_id = $message->id;
-                $lfg->save();
-            });
+            if ($settingsObj->lfg->isRolesToTagActive) {
+                $interaction->channel->sendMessage(SlashCommandHelper::assembleAtRoleString($settingsObj->lfg->rolesToTag))->done(function (Message $message) use ($lfg, $embeddedMessage) {
+                    $lfg->discord_id = $message->id;
+                    $lfg->save();
+                    $message->edit($embeddedMessage);
+                });
+            } else {
+                $interaction->channel->sendMessage($embeddedMessage)->done(function (Message $message) use ($lfg) {
+                    $lfg->discord_id = $message->id;
+                    $lfg->save();
+                });
+            }
 
             // Clean up listeners.
             foreach (self::$buttons as $k => $btn) {

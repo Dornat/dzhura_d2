@@ -19,6 +19,10 @@ class SettingsDefaultObject
                 'levels' => [
                     'active' => false,
                 ],
+                'lfg' => [
+                    'isRolesToTagActive' => false,
+                    'rolesToTag' => [],
+                ],
             ]
         );
     }
