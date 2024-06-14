@@ -2,8 +2,6 @@
 
 namespace App\Discord\SlashCommands\Lfg;
 
-use JetBrains\PhpStorm\ArrayShape;
-
 class ActivityTypes
 {
     public const RAID = 'raid';
@@ -16,6 +14,7 @@ class ActivityTypes
     public const RAID_KF = 'kf';
     public const RAID_RON = 'ron';
     public const RAID_CE = 'ce';
+    public const RAID_SE = 'se';
 
     public const PVP = 'pvp';
     public const PVE = 'pve';
@@ -31,6 +30,10 @@ class ActivityTypes
                 'color' => '#f0c907',
                 'types' => [
                     // In the order of appearance, newer at the top.
+                    self::RAID_SE => [
+                        'label' => 'Межа спасіння (SE)',
+                        'image' => 'https://www.pcinvasion.com/wp-content/uploads/2024/06/Destiny-2-The-Final-Shape-Salvations-Edge-Raid-Teaser.jpg?fit=1200%2C675'
+                    ],
                     self::RAID_CE => [
                         'label' => 'Загибель Кроти (CE)',
                         'image' => 'https://d1lss44hh2trtw.cloudfront.net/assets/article/2023/08/22/crotas-end-raid-start-time-destiny-2_feature.jpg'
