@@ -3,6 +3,7 @@
 namespace App\Discord\SlashCommands\ActionMaps;
 
 use App\Discord\SlashCommands\Settings\Factories\GlobalSettingsFactory;
+use App\Discord\SlashCommands\Settings\Factories\HelldiversSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\LevelsSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\LfgSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\VoiceCreateSettingsFactory;
@@ -33,6 +34,10 @@ use App\Discord\SlashCommands\Settings\Factories\VoiceCreateSettingsFactory;
  * @see LevelsSettingsFactory::actOnNoXPChannelsConditionSelect()
  * @see LevelsSettingsFactory::actOnNoXPChannelsListSelect()
  * @see LevelsSettingsFactory::actOnNoXPChannelsListBtnClear()
+ * @see HelldiversSettingsFactory::actOnHelldiversSettingsModalOpenBtn()
+ * @see HelldiversSettingsFactory::actOnPermittedRolesSelect()
+ * @see HelldiversSettingsFactory::actOnRacesRolesSelect()
+ * @see HelldiversSettingsFactory::actOnLevelsRolesSelect()
  */
 class SettingsSlashCommandActionMap implements ActionMapInterface
 {
@@ -142,6 +147,24 @@ class SettingsSlashCommandActionMap implements ActionMapInterface
             LevelsSettingsFactory::NO_XP_CHANNELS_LIST_BTN_CLEAR => [
                 'factory' => LevelsSettingsFactory::class,
                 'method' => 'actOnNoXPChannelsListBtnClear',
+            ],
+
+            // Helldivers
+            HelldiversSettingsFactory::SETTINGS_HD_OPEN_MODAL_BTN => [
+                'factory' => HelldiversSettingsFactory::class,
+                'method' => 'actOnHelldiversSettingsModalOpenBtn',
+            ],
+            HelldiversSettingsFactory::SETTINGS_HD_PERMITTED_ROLES_SELECT => [
+                'factory' => HelldiversSettingsFactory::class,
+                'method' => 'actOnPermittedRolesSelect',
+            ],
+            HelldiversSettingsFactory::SETTINGS_HD_RACES_ROLES_SELECT => [
+                'factory' => HelldiversSettingsFactory::class,
+                'method' => 'actOnRacesRolesSelect',
+            ],
+            HelldiversSettingsFactory::SETTINGS_HD_LEVELS_ROLES_SELECT => [
+                'factory' => HelldiversSettingsFactory::class,
+                'method' => 'actOnLevelsRolesSelect',
             ],
         ];
     }

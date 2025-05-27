@@ -7,6 +7,7 @@ use App\Discord\SlashCommands\Levels\LevelingXPRewards;
 use App\Discord\SlashCommands\Settings\Objects\Levels\AnnouncementChannelEnum;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Level;
+use App\Setting;
 use Discord\Builders\Components\ActionRow;
 use Discord\Builders\Components\Button;
 use Discord\Builders\MessageBuilder;
@@ -74,13 +75,25 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
         }
     }
 
+    private static function isActiveForGuild(string $guildId): bool
+    {
+        $settingRow = Setting::where('guild_id', $guildId)->first();
+
+        if (!is_null($settingRow)) {
+            $settingsObject = new SettingsObject(json_decode($settingRow->object, true));
+            return $settingsObject->levels->active;
+        }
+
+        return false;
+    }
+
     private static function actOnGiveXPCommand(Interaction $interaction, Discord $discord): void
     {
         if (!$interaction->member->permissions->administrator) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Щось не схоже, що ти маєш права адміністратора. 👁'), true);
             return;
         }
-        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+        if (!self::isActiveForGuild($interaction->guild_id)) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
             return;
         }
@@ -158,7 +171,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
     private static function actOnLeaderboardCommand(Interaction $interaction, Discord $discord): void
     {
-        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+        if (!self::isActiveForGuild($interaction->guild_id)) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
             return;
         }
@@ -263,7 +276,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
     private static function actOnRankCommand(Interaction $interaction, Discord $discord): void
     {
-        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+        if (!self::isActiveForGuild($interaction->guild_id)) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
             return;
         }
@@ -277,8 +290,8 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
                 /** @var Level $levelModel */
                 $levelModel = Level::where('guild_id', $guildId)->where('user_id', $userId)->first();
                 $rank = DB::select("SELECT user_id, xp_total,
-           (SELECT COUNT(*) + 1 
-            FROM levels AS t2 
+           (SELECT COUNT(*) + 1
+            FROM levels AS t2
             WHERE guild_id = '$guildId' AND (t2.xp_total > t1.xp_total OR (t2.xp_total = t1.xp_total AND t2.user_id < t1.user_id))
            ) AS rank
     FROM levels AS t1
@@ -321,7 +334,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Щось не схоже, що ти маєш права адміністратора. 👁'), true);
             return;
         }
-        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+        if (!self::isActiveForGuild($interaction->guild_id)) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
             return;
         }
@@ -384,7 +397,7 @@ class LevelsSlashCommand implements SlashCommandListenerInterface
 
     private static function actOnTableCommand(Interaction $interaction, Discord $discord): void
     {
-        if (!SettingsObject::isActiveForGuild($interaction->guild_id)) {
+        if (!self::isActiveForGuild($interaction->guild_id)) {
             $interaction->respondWithMessage(MessageBuilder::new()->setContent('Для використання даної команди, потрібно активувати систему левелінгу.'), true);
             return;
         }

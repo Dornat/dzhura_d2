@@ -59,6 +59,11 @@ return [
                     ],
                 ]
             ],
+            [
+                'name' => 'helldivers',
+                'description' => 'Налаштування команди /helldivers',
+                'type' => Option::SUB_COMMAND,
+            ],
         ]
     ],
     [
@@ -209,6 +214,17 @@ return [
                 'type' => Option::SUB_COMMAND,
             ],
         ]
+    ],
+    [
+        'name' => 'helldivers',
+        'description' => 'Команди, пов\'язані з helldivers',
+        'options' => [
+            [
+                'name' => 'lfg',
+                'description' => 'Створити lfg',
+                'type' => Option::SUB_COMMAND,
+            ],
+        ],
     ],
     [
         'name' => 'zavala',

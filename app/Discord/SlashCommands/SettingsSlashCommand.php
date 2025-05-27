@@ -5,6 +5,7 @@ namespace App\Discord\SlashCommands;
 use App\Discord\SlashCommands\ActionMaps\LevelsSettingsFactoryActionMap;
 use App\Discord\SlashCommands\ActionMaps\SettingsSlashCommandActionMap;
 use App\Discord\SlashCommands\Settings\Factories\GlobalSettingsFactory;
+use App\Discord\SlashCommands\Settings\Factories\HelldiversSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\LfgSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\VoiceCreateSettingsFactory;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
@@ -20,6 +21,7 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
     public const VC = 'voicecreate';
     public const LEVELS = 'levels';
     public const LFG = 'lfg';
+    public const HELLDIVERS = 'helldivers';
 
     public static function act(Interaction $interaction, Discord $discord): void
     {
@@ -34,11 +36,13 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
              * @see self::actLevelsResponse()
              * @see self::actGlobalResponse()
              * @see self::actLfgResponse()
+             * @see self::actHelldiversResponse()
              */
             $action = match($interaction->data->options->first()->name) {
                 self::VC => 'actVCResponse',
                 self::LEVELS => 'actLevelsResponse',
                 self::LFG => 'actLfgResponse',
+                self::HELLDIVERS => 'actHelldiversResponse',
                 default => 'actGlobalResponse',
             };
 
@@ -123,6 +127,27 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
             ->setComponents([
                 $lfgSettingsFactory->activationSelect,
                 $lfgSettingsFactory->roleSelect,
+            ]);
+
+        $interaction->respondWithMessage($msg, true);
+    }
+
+    public static function actHelldiversResponse(Interaction $interaction, Discord $discord): void
+    {
+        $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
+
+        $helldiversSettingsFactory = new HelldiversSettingsFactory($discord, $settingsObject);
+
+        $msg = MessageBuilder::new()
+            ->setContent("> 📖 Тут можна налаштувати команду `/helldivers lfg`.\n> \n> ⚙")
+            ->addEmbed(
+                $helldiversSettingsFactory->embed
+            )
+            ->setComponents([
+                $helldiversSettingsFactory->permittedRolesSelect,
+                $helldiversSettingsFactory->racesRolesSelect,
+                $helldiversSettingsFactory->levelsRolesSelect,
+                $helldiversSettingsFactory->modalBtnActionRow,
             ]);
 
         $interaction->respondWithMessage($msg, true);

@@ -2,6 +2,8 @@
 
 namespace App\Commands;
 
+use App\Discord\SlashCommands\Helldivers\HelldiversVoiceChannelCleaner;
+use App\Discord\SlashCommands\HelldiversSlashCommand;
 use App\Discord\SlashCommands\Levels\LevelingSystem;
 use App\Discord\SlashCommands\LevelsSlashCommand;
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
@@ -21,6 +23,7 @@ use Discord\Discord;
 use Discord\Exceptions\IntentException;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Parts\User\Activity;
+use Discord\Parts\WebSockets\VoiceStateUpdate;
 use Discord\WebSockets\Event;
 use Exception;
 use Illuminate\Console\Scheduling\Schedule;
@@ -66,15 +69,8 @@ class Run extends Command
                 $slashCommand = new DiscordCommand($discord, $opts);
                 $discord->application->commands->save($slashCommand);
             }
-//
-//            $http = new HttpServer(function (ServerRequestInterface $request) {
-//                return Response::plaintext(
-//                    "Hello World!\n"
-//                );
-//            });
-//
-//            $socket = new SocketServer('127.0.0.1:8080');
-//            $http->listen($socket);
+
+            HelldiversVoiceChannelCleaner::startEmptyChannelChecker($discord);
         });
 
         $discord->on(Event::MESSAGE_CREATE, function (Message $message, Discord $discord) {
@@ -114,11 +110,17 @@ class Run extends Command
             }
         });
 
+        $discord->on('VOICE_STATE_UPDATE', function (VoiceStateUpdate $newState, Discord $discord, VoiceStateUpdate|null $oldState) {
+            HelldiversSlashCommand::actOnHelldiversVCLeave($newState, $discord, $oldState);
+            HelldiversSlashCommand::actOnHelldiversVCEnter($newState, $discord, $oldState);
+        });
+
         $discord->on(Event::INTERACTION_CREATE, function (Interaction $interaction, Discord $discord) {
             SettingsSlashCommand::act($interaction, $discord);
             LfgSlashCommandListener::act($interaction, $discord);
             LfgDeleteSlashCommandListener::act($interaction, $discord);
             LfgEditSlashCommand::act($interaction, $discord);
+            HelldiversSlashCommand::act($interaction, $discord);
             LevelsSlashCommand::act($interaction, $discord);
             VoiceChannelCreateSlashCommand::act($interaction, $discord);
             VoiceChannelEditSlashCommand::act($interaction, $discord);
