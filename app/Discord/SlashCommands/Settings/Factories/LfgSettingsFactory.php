@@ -33,7 +33,7 @@ class LfgSettingsFactory
 
 
         $this->activationSelect = SelectMenu::new(self::LFG_SETTINGS_IS_ROLES_TO_TAG_ACTIVE_SELECT)
-            ->setPlaceholder('Активація системи левелінгу');
+            ->setPlaceholder('Активація теггінгу ролей');
         $this->activationSelect->addOption(new Option('Деактивовано', 0));
         $this->activationSelect->addOption(new Option('Активовано', 1));
 

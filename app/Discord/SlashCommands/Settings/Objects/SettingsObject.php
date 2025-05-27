@@ -11,6 +11,7 @@ class SettingsObject implements SettingsObjectInterface
     public GlobalSettingsObject $global;
     public LevelsObject $levels;
     public LfgObject $lfg;
+    public HelldiversObject $helldivers;
 
     public function __construct(array $json)
     {
@@ -18,6 +19,7 @@ class SettingsObject implements SettingsObjectInterface
         $this->vc = new VCObject($json['vc'] ?? []);
         $this->levels = new LevelsObject($json['levels'] ?? []);
         $this->lfg = new LfgObject($json['lfg'] ?? []);
+        $this->helldivers = new HelldiversObject($json['helldivers'] ?? []);
     }
 
     public function jsonSerialize(): array
@@ -27,6 +29,7 @@ class SettingsObject implements SettingsObjectInterface
         $result['vc'] = $this->vc;
         $result['levels'] = $this->levels;
         $result['lfg'] = $this->lfg;
+        $result['helldivers'] = $this->helldivers;
         return $result;
     }
 
@@ -59,17 +62,5 @@ class SettingsObject implements SettingsObjectInterface
         }
 
         return $settingsObject;
-    }
-
-    public static function isActiveForGuild(string $guildId): bool
-    {
-        $settingRow = Setting::where('guild_id', $guildId)->first();
-
-        if (!is_null($settingRow)) {
-            $settingsObject = new self(json_decode($settingRow->object, true));
-            return $settingsObject->levels->active;
-        }
-
-        return false;
     }
 }
