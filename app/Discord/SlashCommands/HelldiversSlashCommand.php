@@ -94,17 +94,17 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
      */
     public static function actOnHelldiversVCLeave(VoiceStateUpdate $newState, Discord $discord, VoiceStateUpdate|null $oldState): void
     {
-        if (!empty($oldState) && empty($newState['channel_id'])) {
-            $vc = HelldiversLfgVoiceChannel::where('vc_discord_id', $oldState['channel_id'])->first();
+        if (!empty($oldState)) {
+            $vcOldState = HelldiversLfgVoiceChannel::where('vc_discord_id', $oldState['channel_id'])->first();
 
-            if (empty($vc)) {
+            if (empty($vcOldState)) {
                 return;
             }
 
             $guild = $discord->guilds->get('id', $newState['guild_id']);
 
-            if ($vc->owner !== $newState['user_id']) {
-                $participants = json_decode($vc->participants, true);
+            if ($vcOldState->owner !== $newState['user_id']) {
+                $participants = json_decode($vcOldState->participants, true);
                 foreach ($participants as $key => $value) {
                     if (!empty($value) && $value === $newState['user_id']) {
                         $participants[$key] = '';
@@ -112,15 +112,15 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
                     }
                 }
 
-                self::participantsHandler($participants, $vc, $discord);
+                self::participantsHandler($participants, $vcOldState, $discord);
             } else {
-                $guild->channels->delete($oldState['channel_id'])->done(function () use ($vc, $guild) {
-                    $vc->delete();
+                $guild->channels->delete($oldState['channel_id'])->done(function () use ($vcOldState, $guild) {
+                    $vcOldState->delete();
 
-                    $guild->channels->fetch($vc->lfg_channel_id)->then(function (Channel $channel) use ($vc) {
-                        $message = $channel->messages->get('id', $vc->lfg_message_id);
+                    $guild->channels->fetch($vcOldState->lfg_channel_id)->then(function (Channel $channel) use ($vcOldState) {
+                        $message = $channel->messages->get('id', $vcOldState->lfg_message_id);
                         if (empty($message)) {
-                            $channel->messages->fetch($vc->lfg_message_id)->then(function (Message $message){
+                            $channel->messages->fetch($vcOldState->lfg_message_id)->then(function (Message $message){
                                 self::reRenderLfgEmbed($message);
                             });
                         } else {
@@ -225,8 +225,9 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
 
         $createLfgAndTagBtn = Button::new(Button::STYLE_SUCCESS)
             ->setLabel('Створити групу і тегнути')
-            ->setCustomId(self::CREATE_HELLDIVERS_LFG_AND_TAG_BTN)
-            ->setListener(self::actOnCreateHelldiversLfgAndTagBtn($interaction), $discord, true);
+            ->setCustomId(self::CREATE_HELLDIVERS_LFG_AND_TAG_BTN);
+
+        $createLfgAndTagBtn->setListener(self::actOnCreateHelldiversLfgAndTagBtn($interaction, $createLfgAndTagBtn), $discord);
 
         $msgActionRow = ActionRow::new();
         $msgActionRow
@@ -290,9 +291,23 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
     /**
      * @throws Exception
      */
-    public static function actOnCreateHelldiversLfgAndTagBtn(Interaction $prevInteraction): callable
+    public static function actOnCreateHelldiversLfgAndTagBtn(Interaction $prevInteraction, Button $btn): callable
     {
-        return function (Interaction $interaction) use ($prevInteraction) {
+        return function (Interaction $interaction) use ($prevInteraction, $btn) {
+            $embed = $interaction->message->embeds->first();
+            $raceField = $embed['fields']['Раса'];
+            $levelField = $embed['fields']['Рівень'];
+
+            if (empty($raceField['value']) || empty($levelField['value'])) {
+                $interaction->respondWithMessage(
+                    MessageBuilder::new()->setContent('Натисни на селектори і обери ролі, які треба буде тегнути після створення групи.'),
+                    true
+                );
+                return;
+            } else {
+                $btn->removeListener();
+            }
+
             $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
             $category = $settingsObject->helldivers->vcCategory;
             $player = $interaction->member->nick ?? $interaction->member->username;
@@ -343,6 +358,12 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
                     $raceField = $embed['fields']['Раса'];
                     $levelField = $embed['fields']['Рівень'];
                     $prevInteraction->channel->sendMessage("{$raceField['value']}, {$levelField['value']}: <#$newVc->vc_discord_id>");
+
+                    $interaction->updateOriginalResponse(
+                        MessageBuilder::new()->setComponents([])->setContent('Створено!')->_setFlags(Message::FLAG_SUPPRESS_EMBED)
+                    )->done(function () use ($interaction) {
+                        $interaction->deleteOriginalResponse();
+                    });
                 });
             });
         };

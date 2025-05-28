@@ -82,8 +82,8 @@ class HelldiversSettingsFactory
         $vcNameActionRow = ActionRow::new()->addComponent($vcNameInput);
 
         $emptyVcTimeout = TextInput::new('Час видалення неактивного голосового каналу', TextInput::STYLE_SHORT, self::SETTINGS_HD_VC_EMPTY_TIMEOUT_INPUT)
-            ->setPlaceholder('Число, час в хвилинах');
-        $emptyVcTimeout->setValue($settingsObject->helldivers->emptyVcTimeout / 60);
+            ->setPlaceholder('Число, час в секундах');
+        $emptyVcTimeout->setValue($settingsObject->helldivers->emptyVcTimeout);
         $emptyVcTimeoutActionRow = ActionRow::new()->addComponent($emptyVcTimeout);
 
         $interaction->showModal(
@@ -107,7 +107,7 @@ class HelldiversSettingsFactory
             $settingsObject->helldivers->vcCategory = $collection[self::SETTINGS_HD_VC_CATEGORY_INPUT];
             $settingsObject->helldivers->vcLimit = (int)$collection[self::SETTINGS_HD_VC_LIMIT_INPUT];
             $settingsObject->helldivers->vcName = $collection[self::SETTINGS_HD_VC_NAME_INPUT];
-            $settingsObject->helldivers->emptyVcTimeout = (int)$collection[self::SETTINGS_HD_VC_EMPTY_TIMEOUT_INPUT] * 60;
+            $settingsObject->helldivers->emptyVcTimeout = (int)$collection[self::SETTINGS_HD_VC_EMPTY_TIMEOUT_INPUT];
 
             /** @var Setting $settingsModel object */
             $settingsModel->object = json_encode($settingsObject);
@@ -198,7 +198,7 @@ class HelldiversSettingsFactory
             ],
             [
                 'name' => 'Час після якого неактивний голосовий канал буде видалено',
-                'value' => self::emptyVcMinuteMessageTranspiler($settingsObject->helldivers->emptyVcTimeout / 60),
+                'value' => self::emptyVcMessagePluralizer($settingsObject->helldivers->emptyVcTimeout),
                 'inline' => false,
             ],
             [
@@ -219,9 +219,9 @@ class HelldiversSettingsFactory
         ];
     }
 
-    private static function emptyVcMinuteMessageTranspiler(int $emptyVcTimeoutInMinutes): string
+    private static function emptyVcMessagePluralizer(int $emptyVcTimeoutInMinutes): string
     {
-        $forms = ['хвилина', 'хвилини', 'хвилин'];
+        $forms = ['секунда', 'секунди', 'секунд'];
         $mod100 = $emptyVcTimeoutInMinutes % 100;
 
         if ($mod100 > 4 && $mod100 < 20) {
