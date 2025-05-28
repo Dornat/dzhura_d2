@@ -9,6 +9,7 @@ use Discord\Builders\Components\Button;
 use Discord\Builders\Components\Component;
 use Discord\Builders\Components\Option;
 use Discord\Builders\Components\SelectMenu;
+use Discord\Parts\Channel\Message;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Repository\Interaction\ComponentRepository;
 
@@ -48,10 +49,18 @@ class SlashCommandHelper
         return $embedActionRow;
     }
 
-    public static function constructComponentsForMessageBuilderFromInteraction(Interaction $interaction): array
+    public static function constructComponentsForMessageBuilderFromInteraction(?Interaction $interaction, ?Message $message = null): array
     {
         $result = [];
-        foreach ($interaction->message->components as $requestComponent) {
+        if (is_null($interaction) && !is_null($message)) {
+            $interactionMessage = $message;
+        } elseif (!is_null($interaction)) {
+            $interactionMessage = $interaction->message;
+        } else {
+            return $result;
+        }
+
+        foreach ($interactionMessage->components as $requestComponent) {
             $btns = [];
             foreach ($requestComponent->components as $component) {
                 switch ($component->type) {

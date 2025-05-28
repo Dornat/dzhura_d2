@@ -243,8 +243,8 @@ class HelldiversSettingsFactory
     private static function wrapVariablesIntoBackticks(string $string): string
     {
         return str_replace(
-            ['{player}'],
-            ['`{player}`'],
+            ['{player}', '{race}', '{level}'],
+            ['`{player}`', '`{race}`', '`{level}`'],
             $string
         );
     }
