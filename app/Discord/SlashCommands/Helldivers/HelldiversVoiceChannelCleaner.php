@@ -66,6 +66,16 @@ class HelldiversVoiceChannelCleaner
 
                             $guild->channels->fetch($vc->lfg_channel_id)->then(function (Channel $channel) use ($vc) {
                                 $message = $channel->messages->get('id', $vc->lfg_message_id);
+
+                                $tagMessageId = $vc->tag_message_id;
+                                if (!empty($tagMessageId)) {
+                                    $channel->messages->fetch($tagMessageId)->then(function (Message $tagMessage) use ($channel) {
+                                        $channel->messages->delete($tagMessage);
+                                    }, function (Exception $e) {
+                                        Log::error(class_basename(static::class) . ': Failed to delete tag message', ['exception' => $e->getMessage()]);
+                                    });
+                                }
+
                                 if (empty($message)) {
                                     $channel->messages->fetch($vc->lfg_message_id)->then(function (Message $message) {
                                         HelldiversSlashCommand::reRenderLfgEmbed($message);

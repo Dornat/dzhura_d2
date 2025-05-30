@@ -13,15 +13,22 @@ use Illuminate\Database\Eloquent\Model;
  * @property string $vc_discord_id
  * @property string $lfg_channel_id
  * @property string $lfg_message_id
+ * @property string $tag_message_id
  * @property string $owner
  * @property string $name
  * @property integer $user_limit
  * @property string $category
  * @property string $participants
+ * @property int $vc_rename_count
+ * @property $vc_rename_date
  */
 class HelldiversLfgVoiceChannel extends Model
 {
     use HasFactory;
+
+    protected $casts = [
+        'vc_rename_date' => 'datetime'
+    ];
 
     protected $table = 'hd_lfg_vcs';
 

@@ -27,7 +27,6 @@ class SettingsDefaultObject
                 ],
                 'helldivers' => [
                     'vcCategory' => 'Helldivers LFG',
-                    'vcLimit' => 1,
                     'vcName' => 'Група === {player} ===',
                     'emptyVcTimeout' => HelldiversVoiceChannelCleaner::DEFAULT_EMPTY_TIMEOUT,
                     'permittedRoles' => [],

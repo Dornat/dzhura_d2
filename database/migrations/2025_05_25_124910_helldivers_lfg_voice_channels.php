@@ -17,11 +17,14 @@ class HelldiversLfgVoiceChannels extends Migration
             $table->string('vc_discord_id')->comment('VC Discord ID');
             $table->string('lfg_channel_id')->comment('ID of a channel in which Embed is present');
             $table->string('lfg_message_id')->comment('ID of a message with Embed');
+            $table->string('tag_message_id')->nullable()->comment('ID of a message with tagged roles');
             $table->string('owner')->comment('User ID that is the Owner of the VC');
             $table->string('name')->comment('Name of the VC');
             $table->tinyInteger('user_limit')->comment('User limit of the VC');
             $table->string('category')->nullable()->comment('Category Name of the Channel under which the VC will be set');
             $table->longText('participants')->comment('Participants in the lfg in JSON format');
+            $table->tinyInteger('vc_rename_count')->default(0)->comment('How much VC was renamed in the span of 10 minutes');
+            $table->timestamp('vc_rename_date')->nullable()->comment('Last time VC was renamed');
             $table->timestamps();
         });
     }

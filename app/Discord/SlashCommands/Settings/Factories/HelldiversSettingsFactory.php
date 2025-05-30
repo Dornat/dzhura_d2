@@ -71,11 +71,6 @@ class HelldiversSettingsFactory
         $vcCategoryInput->setValue($settingsObject->helldivers->vcCategory);
         $vcCategoryActionRow = ActionRow::new()->addComponent($vcCategoryInput);
 
-        $vcLimitInput = TextInput::new('Ліміт створення голосових каналів', TextInput::STYLE_SHORT, self::SETTINGS_HD_VC_LIMIT_INPUT)
-            ->setPlaceholder('Від 1 до 10');
-        $vcLimitInput->setValue($settingsObject->helldivers->vcLimit);
-        $vcLimitActionRow = ActionRow::new()->addComponent($vcLimitInput);
-
         $vcNameInput = TextInput::new('Назва голосових каналів для lfg', TextInput::STYLE_SHORT, self::SETTINGS_HD_VC_NAME_INPUT)
             ->setPlaceholder('Текст і використання змінної {player} (напр. ={player}=)');
         $vcNameInput->setValue($settingsObject->helldivers->vcName);
@@ -89,7 +84,7 @@ class HelldiversSettingsFactory
         $interaction->showModal(
             'Налаштування команди /helldivers',
             self::SETTINGS_HD_MODAL,
-            [$vcCategoryActionRow, $vcLimitActionRow, $vcNameActionRow, $emptyVcTimeoutActionRow],
+            [$vcCategoryActionRow, $vcNameActionRow, $emptyVcTimeoutActionRow],
             self::onModalSubmit($interaction)
         );
     }
@@ -105,7 +100,6 @@ class HelldiversSettingsFactory
             list($settingsObject, $settingsModel) = SettingsObject::getFromInteractionOrGetDefault($interaction, true);
             /** @var SettingsObject $settingsObject */
             $settingsObject->helldivers->vcCategory = $collection[self::SETTINGS_HD_VC_CATEGORY_INPUT];
-            $settingsObject->helldivers->vcLimit = (int)$collection[self::SETTINGS_HD_VC_LIMIT_INPUT];
             $settingsObject->helldivers->vcName = $collection[self::SETTINGS_HD_VC_NAME_INPUT];
             $settingsObject->helldivers->emptyVcTimeout = (int)$collection[self::SETTINGS_HD_VC_EMPTY_TIMEOUT_INPUT];
 
@@ -184,11 +178,6 @@ class HelldiversSettingsFactory
             [
                 'name' => 'Назва підкатегорії для госових каналів',
                 'value' => $settingsObject->helldivers->vcCategory,
-                'inline' => false,
-            ],
-            [
-                'name' => 'Ліміт створення голосових каналів',
-                'value' => $settingsObject->helldivers->vcLimit,
                 'inline' => false,
             ],
             [
