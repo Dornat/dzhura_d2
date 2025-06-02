@@ -2,14 +2,20 @@
 
 namespace App\Discord\Helpers;
 
+use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Discord\SlashCommands\Settings\SelectMenuChannels;
 use App\Discord\SlashCommands\Settings\SelectMenuRoles;
+use App\Setting;
+use DateTimeImmutable;
 use Discord\Builders\Components\ActionRow;
 use Discord\Builders\Components\Button;
 use Discord\Builders\Components\Component;
 use Discord\Builders\Components\Option;
 use Discord\Builders\Components\SelectMenu;
+use Discord\Builders\MessageBuilder;
 use Discord\Parts\Channel\Message;
+use Discord\Parts\Embed\Embed;
+use Discord\Parts\Embed\Field;
 use Discord\Parts\Interactions\Interaction;
 use Discord\Repository\Interaction\ComponentRepository;
 
@@ -105,5 +111,34 @@ class SlashCommandHelper
         }
 
         return $result;
+    }
+
+    public static function updateSettingsModelAndEmbed(SettingsObject $settingsObject, Setting $settingsModel, Interaction $interaction, array $assembledEmbedFields): void
+    {
+        $settingsModel->object = json_encode($settingsObject);
+        $settingsModel->updated_by = $interaction->member->user->id;
+        $settingsModel->save();
+
+        /** @var Embed $newEmbed */
+        $newEmbed = $interaction->message->embeds->first();
+        /** @var Field $field */
+        $newEmbed->offsetUnset('fields');
+        $newEmbed->addField(...$assembledEmbedFields);
+
+        $interaction->updateMessage(
+            MessageBuilder::new()
+                ->setContent($interaction->message->content)
+                ->addEmbed($newEmbed)
+                ->setComponents(self::constructComponentsForMessageBuilderFromInteraction($interaction))
+        );
+    }
+
+    public static function getCreationDateFromSnowflake(string $snowflake): DateTimeImmutable
+    {
+        // Discord's epoch: Jan 1, 2015 (in milliseconds)
+        $discordEpoch = 1420070400000;
+        // Convert snowflake to integer, then right-shift 22 bits, then add epoch
+        $timestamp = ((intval($snowflake) >> 22) + $discordEpoch) / 1000;
+        return (new DateTimeImmutable())->setTimestamp($timestamp);
     }
 }
