@@ -139,7 +139,7 @@ class HelldiversSettingsFactory
             ];
         }
 
-        self::updateSettingsModelAndEmbed($settingsObject, $settingsModel, $interaction);
+        SlashCommandHelper::updateSettingsModelAndEmbed($settingsObject, $settingsModel, $interaction, self::assembleEmbedFields($settingsObject));
     }
 
     public static function actOnRacesRolesSelect(Interaction $interaction, Discord $discord): void
@@ -154,7 +154,7 @@ class HelldiversSettingsFactory
             ];
         }
 
-        self::updateSettingsModelAndEmbed($settingsObject, $settingsModel, $interaction);
+        SlashCommandHelper::updateSettingsModelAndEmbed($settingsObject, $settingsModel, $interaction, self::assembleEmbedFields($settingsObject));
     }
 
     public static function actOnLevelsRolesSelect(Interaction $interaction, Discord $discord): void
@@ -169,7 +169,7 @@ class HelldiversSettingsFactory
             ];
         }
 
-        self::updateSettingsModelAndEmbed($settingsObject, $settingsModel, $interaction);
+        SlashCommandHelper::updateSettingsModelAndEmbed($settingsObject, $settingsModel, $interaction, self::assembleEmbedFields($settingsObject));
     }
 
     private static function assembleEmbedFields(SettingsObject $settingsObject): array
@@ -235,26 +235,6 @@ class HelldiversSettingsFactory
             ['{player}', '{race}', '{level}'],
             ['`{player}`', '`{race}`', '`{level}`'],
             $string
-        );
-    }
-
-    public static function updateSettingsModelAndEmbed(SettingsObject $settingsObject, Setting $settingsModel, Interaction $interaction): void
-    {
-        $settingsModel->object = json_encode($settingsObject);
-        $settingsModel->updated_by = $interaction->member->user->id;
-        $settingsModel->save();
-
-        /** @var Embed $newEmbed */
-        $newEmbed = $interaction->message->embeds->first();
-        /** @var Field $field */
-        $newEmbed->offsetUnset('fields');
-        $newEmbed->addField(...self::assembleEmbedFields($settingsObject));
-
-        $interaction->updateMessage(
-            MessageBuilder::new()
-                ->setContent($interaction->message->content)
-                ->addEmbed($newEmbed)
-                ->setComponents(SlashCommandHelper::constructComponentsForMessageBuilderFromInteraction($interaction))
         );
     }
 }

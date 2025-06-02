@@ -7,6 +7,7 @@ use App\Discord\SlashCommands\ActionMaps\SettingsSlashCommandActionMap;
 use App\Discord\SlashCommands\Settings\Factories\GlobalSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\HelldiversSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\LfgSettingsFactory;
+use App\Discord\SlashCommands\Settings\Factories\ServerLogsSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\VoiceCreateSettingsFactory;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use Discord\Builders\MessageBuilder;
@@ -22,6 +23,7 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
     public const LEVELS = 'levels';
     public const LFG = 'lfg';
     public const HELLDIVERS = 'helldivers';
+    public const SERVER_LOGS = 'server-logs';
 
     public static function act(Interaction $interaction, Discord $discord): void
     {
@@ -37,12 +39,14 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
              * @see self::actGlobalResponse()
              * @see self::actLfgResponse()
              * @see self::actHelldiversResponse()
+             * @see self::actServerLogsResponse()
              */
             $action = match($interaction->data->options->first()->name) {
                 self::VC => 'actVCResponse',
                 self::LEVELS => 'actLevelsResponse',
                 self::LFG => 'actLfgResponse',
                 self::HELLDIVERS => 'actHelldiversResponse',
+                self::SERVER_LOGS => 'actServerLogsResponse',
                 default => 'actGlobalResponse',
             };
 
@@ -148,6 +152,25 @@ class SettingsSlashCommand implements SlashCommandListenerInterface
                 $helldiversSettingsFactory->racesRolesSelect,
                 $helldiversSettingsFactory->levelsRolesSelect,
                 $helldiversSettingsFactory->modalBtnActionRow,
+            ]);
+
+        $interaction->respondWithMessage($msg, true);
+    }
+
+    public static function actServerLogsResponse(Interaction $interaction, Discord $discord): void
+    {
+        $settingsObject = SettingsObject::getFromInteractionOrGetDefault($interaction);
+
+        $serverLogsSettingsFactory = new ServerLogsSettingsFactory($discord, $settingsObject);
+
+        $msg = MessageBuilder::new()
+            ->setContent("> 📖 Тут можна налаштувати логи для серверу.\n> \n> ⚙")
+            ->addEmbed(
+                $serverLogsSettingsFactory->embed
+            )
+            ->setComponents([
+                $serverLogsSettingsFactory->activationSelect,
+                $serverLogsSettingsFactory->sendMessagesChannelSelect,
             ]);
 
         $interaction->respondWithMessage($msg, true);

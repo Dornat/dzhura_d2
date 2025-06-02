@@ -6,6 +6,7 @@ use App\Discord\SlashCommands\Settings\Factories\GlobalSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\HelldiversSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\LevelsSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\LfgSettingsFactory;
+use App\Discord\SlashCommands\Settings\Factories\ServerLogsSettingsFactory;
 use App\Discord\SlashCommands\Settings\Factories\VoiceCreateSettingsFactory;
 
 /**
@@ -38,6 +39,8 @@ use App\Discord\SlashCommands\Settings\Factories\VoiceCreateSettingsFactory;
  * @see HelldiversSettingsFactory::actOnPermittedRolesSelect()
  * @see HelldiversSettingsFactory::actOnRacesRolesSelect()
  * @see HelldiversSettingsFactory::actOnLevelsRolesSelect()
+ * @see ServerLogsSettingsFactory::actOnActivateSelect()
+ * @see ServerLogsSettingsFactory::actOnSendMessagesChannelSelect()
  */
 class SettingsSlashCommandActionMap implements ActionMapInterface
 {
@@ -165,6 +168,16 @@ class SettingsSlashCommandActionMap implements ActionMapInterface
             HelldiversSettingsFactory::SETTINGS_HD_LEVELS_ROLES_SELECT => [
                 'factory' => HelldiversSettingsFactory::class,
                 'method' => 'actOnLevelsRolesSelect',
+            ],
+
+            // Server Logs
+            ServerLogsSettingsFactory::SETTINGS_SERVER_LOGS_IS_ACTIVE_SELECT => [
+                'factory' => ServerLogsSettingsFactory::class,
+                'method' => 'actOnActivateSelect',
+            ],
+            ServerLogsSettingsFactory::SETTINGS_SERVER_LOGS_SEND_MESSAGES_CHANNEL_SELECT => [
+                'factory' => ServerLogsSettingsFactory::class,
+                'method' => 'actOnSendMessagesChannelSelect',
             ],
         ];
     }

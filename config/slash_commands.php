@@ -64,6 +64,11 @@ return [
                 'description' => 'Налаштування команди /helldivers',
                 'type' => Option::SUB_COMMAND,
             ],
+            [
+                'name' => 'server-logs',
+                'description' => 'Налаштування логів на сервері',
+                'type' => Option::SUB_COMMAND,
+            ],
         ]
     ],
     [

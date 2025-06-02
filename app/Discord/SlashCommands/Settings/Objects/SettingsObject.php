@@ -12,6 +12,7 @@ class SettingsObject implements SettingsObjectInterface
     public LevelsObject $levels;
     public LfgObject $lfg;
     public HelldiversObject $helldivers;
+    public ServerLogsSettingsObject $serverLogs;
 
     public function __construct(array $json)
     {
@@ -20,6 +21,7 @@ class SettingsObject implements SettingsObjectInterface
         $this->levels = new LevelsObject($json['levels'] ?? []);
         $this->lfg = new LfgObject($json['lfg'] ?? []);
         $this->helldivers = new HelldiversObject($json['helldivers'] ?? []);
+        $this->serverLogs = new ServerLogsSettingsObject($json['serverLogs'] ?? []);
     }
 
     public function jsonSerialize(): array
@@ -30,6 +32,7 @@ class SettingsObject implements SettingsObjectInterface
         $result['levels'] = $this->levels;
         $result['lfg'] = $this->lfg;
         $result['helldivers'] = $this->helldivers;
+        $result['serverLogs'] = $this->serverLogs;
         return $result;
     }
 

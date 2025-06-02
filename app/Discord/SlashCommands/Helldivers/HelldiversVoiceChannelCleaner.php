@@ -72,7 +72,7 @@ class HelldiversVoiceChannelCleaner
                                     $channel->messages->fetch($tagMessageId)->then(function (Message $tagMessage) use ($channel) {
                                         $channel->messages->delete($tagMessage);
                                     }, function (Exception $e) {
-                                        Log::error(class_basename(static::class) . ': Failed to delete tag message', ['exception' => $e->getMessage()]);
+                                        Log::warning(class_basename(static::class) . ': Failed to delete tag message', ['exception' => $e->getMessage()]);
                                     });
                                 }
 

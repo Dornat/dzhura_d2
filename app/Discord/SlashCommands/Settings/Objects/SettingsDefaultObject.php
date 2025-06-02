@@ -33,6 +33,9 @@ class SettingsDefaultObject
                     'racesRoles' => [],
                     'levelsRoles' => [],
                 ],
+                'serverLogs' => [
+                    'active' => false,
+                ]
             ]
         );
     }
