@@ -126,7 +126,7 @@ class Run extends Command
             }
         });
 
-        $discord->on('VOICE_STATE_UPDATE', function (VoiceStateUpdate $newState, Discord $discord, VoiceStateUpdate|null $oldState) {
+        $discord->on(Event::VOICE_STATE_UPDATE, function (VoiceStateUpdate $newState, Discord $discord, VoiceStateUpdate|null $oldState) {
             HelldiversSlashCommand::actOnHelldiversVCLeave($newState, $discord, $oldState);
             HelldiversSlashCommand::actOnHelldiversVCEnter($newState, $discord, $oldState);
         });

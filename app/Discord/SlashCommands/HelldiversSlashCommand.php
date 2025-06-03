@@ -100,6 +100,10 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
     public static function actOnHelldiversVCLeave(VoiceStateUpdate $newState, Discord $discord, VoiceStateUpdate|null $oldState): void
     {
         if (!empty($oldState)) {
+            if ($oldState->channel_id === $newState->channel_id) {
+                return;
+            }
+
             $vcOldState = HelldiversLfgVoiceChannel::where('vc_discord_id', $oldState['channel_id'])->first();
 
             if (empty($vcOldState)) {
