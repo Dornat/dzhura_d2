@@ -21,6 +21,7 @@ class HelldiversSettingsFactory
     public const SETTINGS_HD_VC_CATEGORY_INPUT = 'settings_hd_vc_category_input';
     public const SETTINGS_HD_VC_LIMIT_INPUT = 'settings_hd_vc_limit_input';
     public const SETTINGS_HD_VC_NAME_INPUT = 'settings_hd_vc_name_input';
+    public const SETTINGS_HD_VC_TAG_MESSAGE_INPUT = 'settings_hd_vc_tag_message_input';
     public const SETTINGS_HD_VC_EMPTY_TIMEOUT_INPUT = 'settings_hd_vc_empty_timeout_input';
     public const SETTINGS_HD_PERMITTED_ROLES_SELECT = 'settings_hd_permitted_roles_select';
     public const SETTINGS_HD_RACES_ROLES_SELECT = 'settings_hd_races_roles_select';
@@ -76,6 +77,11 @@ class HelldiversSettingsFactory
         $vcNameInput->setValue($settingsObject->helldivers->vcName);
         $vcNameActionRow = ActionRow::new()->addComponent($vcNameInput);
 
+        $vcTagMessageInput = TextInput::new('Текст повідомлення з тегами ролей', TextInput::STYLE_SHORT, self::SETTINGS_HD_VC_TAG_MESSAGE_INPUT)
+            ->setPlaceholder('Доступні змінні: {player}, {race}, {level}, {vc}');
+        $vcTagMessageInput->setValue($settingsObject->helldivers->vcTagMessage);
+        $vcTagMessageInputActionRow = ActionRow::new()->addComponent($vcTagMessageInput);
+
         $emptyVcTimeout = TextInput::new('Час видалення неактивного голосового каналу', TextInput::STYLE_SHORT, self::SETTINGS_HD_VC_EMPTY_TIMEOUT_INPUT)
             ->setPlaceholder('Число, час в секундах');
         $emptyVcTimeout->setValue($settingsObject->helldivers->emptyVcTimeout);
@@ -84,7 +90,7 @@ class HelldiversSettingsFactory
         $interaction->showModal(
             'Налаштування команди /helldivers',
             self::SETTINGS_HD_MODAL,
-            [$vcCategoryActionRow, $vcNameActionRow, $emptyVcTimeoutActionRow],
+            [$vcCategoryActionRow, $vcNameActionRow, $emptyVcTimeoutActionRow, $vcTagMessageInputActionRow],
             self::onModalSubmit($interaction)
         );
     }
@@ -101,6 +107,7 @@ class HelldiversSettingsFactory
             /** @var SettingsObject $settingsObject */
             $settingsObject->helldivers->vcCategory = $collection[self::SETTINGS_HD_VC_CATEGORY_INPUT];
             $settingsObject->helldivers->vcName = $collection[self::SETTINGS_HD_VC_NAME_INPUT];
+            $settingsObject->helldivers->vcTagMessage = $collection[self::SETTINGS_HD_VC_TAG_MESSAGE_INPUT];
             $settingsObject->helldivers->emptyVcTimeout = (int)$collection[self::SETTINGS_HD_VC_EMPTY_TIMEOUT_INPUT];
 
             /** @var Setting $settingsModel object */
@@ -186,6 +193,11 @@ class HelldiversSettingsFactory
                 'inline' => false,
             ],
             [
+                'name' => 'Текст повідомлення з тегами ролей',
+                'value' => self::wrapVariablesIntoBackticks($settingsObject->helldivers->vcTagMessage),
+                'inline' => false,
+            ],
+            [
                 'name' => 'Час після якого неактивний голосовий канал буде видалено',
                 'value' => self::emptyVcMessagePluralizer($settingsObject->helldivers->emptyVcTimeout),
                 'inline' => false,
@@ -232,8 +244,8 @@ class HelldiversSettingsFactory
     private static function wrapVariablesIntoBackticks(string $string): string
     {
         return str_replace(
-            ['{player}', '{race}', '{level}'],
-            ['`{player}`', '`{race}`', '`{level}`'],
+            ['{player}', '{race}', '{level}', '{vc}'],
+            ['`{player}`', '`{race}`', '`{level}`', '`{vc}`'],
             $string
         );
     }

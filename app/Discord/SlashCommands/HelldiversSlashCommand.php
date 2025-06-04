@@ -290,7 +290,7 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
 
         if (empty($raceField['value']) && empty($levelField['value'])) {
             $interaction->respondWithMessage(
-                MessageBuilder::new()->setContent('Натисни на селектори і обери одну або дві ролі, які треба буде тегнути після створення групи.'),
+                MessageBuilder::new()->setContent('Натисни на один або обидва селектори та обери одну або дві ролі, які потім будуть тегнуті після створення групи.'),
                 true
             );
             return;
@@ -380,7 +380,20 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
                 $raceRole = explode(':', $raceField['value']);
                 $levelRole = explode(':', $levelField['value']);
 
-                $interaction->channel->sendMessage(join([!empty($raceRole) ? $raceRole[0] : null, !empty($levelRole) ? $levelRole[0] : null]) . ": <#$hdLfgVc->vc_discord_id>")->done(function (Message $message) use ($interaction, $hdLfgVc) {
+                $settings = SettingsObject::getFromInteractionOrGetDefault($interaction);
+
+                $tagMessageContent = str_replace(
+                    ['{player}', '{race}', '{level}', '{vc}'],
+                    [
+                        $interaction->user,
+                        empty($raceRole) ? null : $raceRole[0],
+                        empty($levelRole) ? null : $levelRole[0],
+                        "<#$hdLfgVc->vc_discord_id>"
+                    ],
+                    $settings->helldivers->vcTagMessage
+                );
+
+                $interaction->channel->sendMessage($tagMessageContent)->done(function (Message $message) use ($interaction, $hdLfgVc) {
                     $tagMessageId = $hdLfgVc->tag_message_id;
                     $hdLfgVc->tag_message_id = $message->id;
                     $hdLfgVc->save();
