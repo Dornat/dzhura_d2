@@ -338,8 +338,13 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
                 }, function (Exception $exception) {
                     Log::error(class_basename(static::class) . ': Failed to update channel name', ['exception' => $exception->getMessage()]);
                 });
-            }, function (Exception $exception) {
+            }, function (Exception $exception) use ($hdLfgVc) {
                 Log::error(class_basename(static::class) . ': Failed to fetch a channel', ['exception' => $exception->getMessage()]);
+                // If a channel is already created, and we couldn't fetch it, it means that there was some issue.
+                // E.g., Channel was created in the db and was deleted on the server but not deleted from the db after that.
+                // So here I think that we need to delete the channel to resolve issues with channel creation for users
+                // in the future.
+                $hdLfgVc->delete();
             });
         } else {
             $newVc = $interaction->guild->channels->create([
