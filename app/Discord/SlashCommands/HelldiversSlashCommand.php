@@ -28,6 +28,7 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
     public const HELLDIVERS = 'helldivers';
 
     public const LFG = 'lfg';
+    public const CLEAR = 'clear';
 
     public const CREATE_HELLDIVERS_LFG_BTN = 'create_helldivers_lfg_btn';
     public const CREATE_HELLDIVERS_LFG_AND_TAG_BTN = 'create_helldivers_lfg_and_tag_btn';
@@ -58,6 +59,8 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
 
         if ($interaction->data->options->first()->name === self::LFG) {
             self::actOnLfgCommand($interaction, $discord);
+        } else if ($interaction->data->options->first()->name === self::CLEAR) {
+            self::actOnClearCommand($interaction, $discord);
         }
     }
 
@@ -92,6 +95,39 @@ class HelldiversSlashCommand implements SlashCommandListenerInterface
         $interaction->respondWithMessage(MessageBuilder::new()->setContent('Запускаю `/helldivers` `lfg` з дуже розумною пикою... 🗿'))->done(function () use ($interaction) {
             $interaction->deleteOriginalResponse();
         });
+    }
+
+    private static function actOnClearCommand(Interaction $interaction, Discord $discord): void
+    {
+        if (!$interaction->member->permissions->administrator) {
+            $interaction->respondWithMessage(
+                MessageBuilder::new()->setContent('Щось не схоже, що ти маєш права адміністратора. 👁'),
+                true
+            );
+            return;
+        }
+
+        $channelId = $interaction->data->options->first()->options['channel_id']->value;
+
+        $vc = HelldiversLfgVoiceChannel::where('vc_discord_id', $channelId)
+            ->where('guild_id', $interaction->guild_id)
+            ->first();
+
+        if (empty($vc)) {
+            $interaction->respondWithMessage(
+                MessageBuilder::new()->setContent('Групу з таким ідентифікатором каналу не знайдено. 🤔'),
+                true
+            );
+            return;
+        }
+
+        $vc->participants = json_encode(self::generateEmptyParticipantsList());
+        $vc->save();
+
+        $interaction->respondWithMessage(
+            MessageBuilder::new()->setContent("Учасників групи `$vc->name` очищено. Канал буде видалено автоматично. ✅"),
+            true
+        );
     }
 
     /**

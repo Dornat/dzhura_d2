@@ -12,10 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 /**
- * @method static create(array $array)
- * @method static where(string $string, mixed $int)
- * @method static find(mixed $int)
- * @method static whereIn(string $string, array $ids)
+ * @method static \Illuminate\Database\Eloquent\Builder|static create(array $attributes = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|static where(string|array|\Closure $column, mixed $operator = null, mixed $value = null)
+ * @method static \Illuminate\Database\Eloquent\Builder|static find(mixed $id)
+ * @method static \Illuminate\Database\Eloquent\Builder|static whereIn(string $column, mixed $values)
+ * @mixin \Illuminate\Database\Eloquent\Builder
  * @property string $uuid
  * @property string $discord_id
  * @property string $channel_id
@@ -46,7 +47,7 @@ class Lfg extends Model
 
     protected $fillable = ['channel_id', 'guild_id', 'owner', 'title', 'description', 'group_size', 'time_of_start', 'type', 'manual'];
 
-    public static function boot()
+    public static function boot(): void
     {
         parent::boot();
 

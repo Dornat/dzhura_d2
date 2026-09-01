@@ -229,6 +229,19 @@ return [
                 'description' => 'Створити lfg',
                 'type' => Option::SUB_COMMAND,
             ],
+            [
+                'name' => 'clear',
+                'description' => 'Очистити учасників групи (тільки для адмінів)',
+                'type' => Option::SUB_COMMAND,
+                'options' => [
+                    [
+                        'name' => 'channel_id',
+                        'description' => 'Ідентифікатор голосового каналу групи',
+                        'type' => Option::STRING,
+                        'required' => true
+                    ]
+                ]
+            ],
         ],
     ],
     [

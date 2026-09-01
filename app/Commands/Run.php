@@ -11,7 +11,6 @@ use App\Discord\SlashCommands\LevelsSlashCommand;
 use App\Discord\SlashCommands\LfgDeleteSlashCommandListener;
 use App\Discord\SlashCommands\LfgEditSlashCommand;
 use App\Discord\SlashCommands\LfgSlashCommandListener;
-use App\Discord\SlashCommands\Settings\Factories\ServerLogsSettingsFactory;
 use App\Discord\SlashCommands\Settings\Objects\SettingsObject;
 use App\Discord\SlashCommands\SettingsSlashCommand;
 use App\Discord\SlashCommands\VoiceChannelCreateSlashCommand;

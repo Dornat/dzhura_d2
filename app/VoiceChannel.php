@@ -6,9 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @method static create(array $array)
- * @method static where(string $string, string|null $id)
- * @method static find(string $id)
+ * @method static \Illuminate\Database\Eloquent\Builder|static create(array $attributes = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|static where(string|array|\Closure $column, mixed $operator = null, mixed $value = null)
+ * @method static \Illuminate\Database\Eloquent\Builder|static find(mixed $id)
+ * @mixin \Illuminate\Database\Eloquent\Builder
  * @property string $lfg_uuid
  * @property string $guild_id
  * @property string $vc_discord_id

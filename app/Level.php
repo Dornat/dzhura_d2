@@ -7,7 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * @method static where(string $string, string $guildId)
+ * @method static \Illuminate\Database\Eloquent\Builder|static where(string|array|\Closure $column, mixed $operator = null, mixed $value = null)
+ * @mixin \Illuminate\Database\Eloquent\Builder
  * @property string $guild_id
  * @property string $user_id
  * @property int $level
